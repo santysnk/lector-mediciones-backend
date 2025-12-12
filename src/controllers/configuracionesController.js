@@ -92,12 +92,17 @@ const obtenerConfiguracion = async (req, res) => {
 const crearConfiguracion = async (req, res) => {
   const { nombre, descripcion } = req.body;
   const userId = req.user.id;
+  const userEmail = req.user.email;
+  const userName = req.user.nombre;
 
   if (!nombre || nombre.trim() === '') {
     return res.status(400).json({ error: 'El nombre es requerido' });
   }
 
   try {
+    // Asegurar que el usuario existe en la tabla usuarios
+    await asegurarUsuarioExiste(userId, userEmail, userName);
+
     const { data, error } = await supabase
       .from('configuraciones')
       .insert({
@@ -116,6 +121,36 @@ const crearConfiguracion = async (req, res) => {
     res.status(500).json({ error: 'Error al crear configuración' });
   }
 };
+
+/**
+ * Asegura que el usuario existe en la tabla usuarios de Supabase.
+ * Si no existe, lo crea automáticamente.
+ */
+async function asegurarUsuarioExiste(userId, email, nombre) {
+  // Verificar si el usuario ya existe
+  const { data: existente } = await supabase
+    .from('usuarios')
+    .select('id')
+    .eq('id', userId)
+    .single();
+
+  if (existente) return; // Ya existe, no hacer nada
+
+  // Crear el usuario
+  const { error } = await supabase
+    .from('usuarios')
+    .insert({
+      id: userId,
+      email: email || `user_${userId.substring(0, 8)}@local`,
+      nombre: nombre || 'Usuario',
+      password_hash: '', // Supabase Auth maneja la contraseña
+    });
+
+  if (error && error.code !== '23505') { // 23505 = duplicate key (ya existe)
+    console.error('Error creando usuario:', error);
+    throw error;
+  }
+}
 
 /**
  * Actualizar una configuración

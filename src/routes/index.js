@@ -12,6 +12,8 @@ const puestosController = require('../controllers/puestosController');
 const alimentadoresController = require('../controllers/alimentadoresController');
 const permisosController = require('../controllers/permisosController');
 const preferenciasController = require('../controllers/preferenciasController');
+const lecturasController = require('../controllers/lecturasController');
+const testConexionController = require('../controllers/testConexionController');
 
 // ============================================
 // Rutas de salud/status
@@ -63,5 +65,18 @@ router.get('/configuraciones/:configuracionId/preferencias', verificarToken, pre
 router.post('/configuraciones/:configuracionId/preferencias', verificarToken, preferenciasController.guardarPreferencias);
 router.patch('/configuraciones/:configuracionId/preferencias', verificarToken, preferenciasController.actualizarPreferencias);
 router.delete('/configuraciones/:configuracionId/preferencias', verificarToken, preferenciasController.eliminarPreferencias);
+
+// ============================================
+// Rutas de lecturas
+// ============================================
+router.get('/alimentadores/:alimentadorId/lecturas', verificarToken, lecturasController.obtenerUltimasLecturas);
+router.get('/alimentadores/:alimentadorId/lecturas/historico', verificarToken, lecturasController.obtenerLecturasHistoricas);
+router.get('/configuraciones/:configuracionId/lecturas/ultima', verificarToken, lecturasController.obtenerUltimaLecturaPorConfiguracion);
+
+// ============================================
+// Rutas de test de conexión Modbus
+// ============================================
+router.post('/test-conexion', verificarToken, testConexionController.testConexion);
+router.get('/test-conexion/estado', verificarToken, testConexionController.obtenerEstado);
 
 module.exports = router;
