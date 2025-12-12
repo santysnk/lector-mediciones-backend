@@ -17,13 +17,21 @@ const PORT = process.env.PORT || 3001;
 // Socket.IO - Conexión con agentes
 // ============================================
 
+// Orígenes permitidos para CORS
+const origensPermitidos = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+];
+
+// Agregar frontend en producción si está configurado
+if (process.env.FRONTEND_URL) {
+  origensPermitidos.push(process.env.FRONTEND_URL);
+}
+
 const io = new Server(server, {
   cors: {
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:3000',
-    ],
+    origin: origensPermitidos,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -127,11 +135,7 @@ module.exports.procesarRespuestaTest = (requestId, resultado) => {
 
 // CORS - permitir requests desde el frontend
 app.use(cors({
-  origin: [
-    'http://localhost:5173',  // Vite dev server
-    'http://localhost:5174',  // Vite dev server alternativo
-    'http://localhost:3000',  // Por si usas otro puerto
-  ],
+  origin: origensPermitidos,
   credentials: true,
 }));
 
