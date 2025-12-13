@@ -78,7 +78,7 @@ const crearAlimentador = async (req, res) => {
  */
 const actualizarAlimentador = async (req, res) => {
   const { id } = req.params;
-  const { nombre, color, orden, config_rele, config_analizador } = req.body;
+  const { nombre, color, orden, config_rele, config_analizador, gap_horizontal } = req.body;
 
   try {
     const updates = {};
@@ -87,6 +87,8 @@ const actualizarAlimentador = async (req, res) => {
     if (orden !== undefined) updates.orden = orden;
     if (config_rele !== undefined) updates.config_rele = config_rele;
     if (config_analizador !== undefined) updates.config_analizador = config_analizador;
+    // Nuevo campo para gap horizontal
+    if (gap_horizontal !== undefined) updates.gap_horizontal = gap_horizontal;
 
     const { data, error } = await supabase
       .from('alimentadores')

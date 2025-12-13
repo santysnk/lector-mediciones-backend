@@ -81,7 +81,7 @@ const crearPuesto = async (req, res) => {
  */
 const actualizarPuesto = async (req, res) => {
   const { id } = req.params;
-  const { nombre, descripcion, orden, color, bg_color } = req.body;
+  const { nombre, descripcion, orden, color, bg_color, gaps_verticales } = req.body;
 
   try {
     const updates = {};
@@ -90,6 +90,7 @@ const actualizarPuesto = async (req, res) => {
     if (orden !== undefined) updates.orden = orden;
     if (color !== undefined) updates.color = color;
     if (bg_color !== undefined) updates.bg_color = bg_color;
+    if (gaps_verticales !== undefined) updates.gaps_verticales = gaps_verticales;
 
     const { data, error } = await supabase
       .from('puestos')
