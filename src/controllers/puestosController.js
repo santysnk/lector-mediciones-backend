@@ -7,7 +7,7 @@ const supabase = require('../config/supabase');
  * Obtener todos los puestos de una configuración
  */
 const obtenerPuestos = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
 
   try {
     const { data, error } = await supabase
@@ -16,7 +16,7 @@ const obtenerPuestos = async (req, res) => {
         *,
         alimentadores (*)
       `)
-      .eq('configuracion_id', configuracionId)
+      .eq('workspace_id', workspaceId)
       .order('orden', { ascending: true });
 
     if (error) throw error;
@@ -32,7 +32,7 @@ const obtenerPuestos = async (req, res) => {
  * Crear un nuevo puesto
  */
 const crearPuesto = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
   const { nombre, descripcion, orden, color, bg_color } = req.body;
 
   if (!nombre || nombre.trim() === '') {
@@ -46,7 +46,7 @@ const crearPuesto = async (req, res) => {
       const { data: ultimoPuesto } = await supabase
         .from('puestos')
         .select('orden')
-        .eq('configuracion_id', configuracionId)
+        .eq('workspace_id', workspaceId)
         .order('orden', { ascending: false })
         .limit(1)
         .single();
@@ -57,7 +57,7 @@ const crearPuesto = async (req, res) => {
     const { data, error } = await supabase
       .from('puestos')
       .insert({
-        configuracion_id: configuracionId,
+        workspace_id: workspaceId,
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
         orden: nuevoOrden,
@@ -133,7 +133,7 @@ const eliminarPuesto = async (req, res) => {
  * Reordenar puestos
  */
 const reordenarPuestos = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
   const { ordenes } = req.body; // Array de { id, orden }
 
   if (!Array.isArray(ordenes)) {
@@ -147,7 +147,7 @@ const reordenarPuestos = async (req, res) => {
         .from('puestos')
         .update({ orden: item.orden })
         .eq('id', item.id)
-        .eq('configuracion_id', configuracionId);
+        .eq('workspace_id', workspaceId);
     }
 
     res.json({ mensaje: 'Puestos reordenados' });

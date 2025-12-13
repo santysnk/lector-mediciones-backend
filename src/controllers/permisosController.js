@@ -7,7 +7,7 @@ const supabase = require('../config/supabase');
  * Obtener todos los permisos de una configuración
  */
 const obtenerPermisos = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
 
   try {
     const { data, error } = await supabase
@@ -16,7 +16,7 @@ const obtenerPermisos = async (req, res) => {
         *,
         usuarios (id, email, nombre)
       `)
-      .eq('configuracion_id', configuracionId);
+      .eq('workspace_id', workspaceId);
 
     if (error) throw error;
 
@@ -31,7 +31,7 @@ const obtenerPermisos = async (req, res) => {
  * Agregar permiso a un usuario (invitar)
  */
 const agregarPermiso = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
   const { email, rol } = req.body;
 
   if (!email || !rol) {
@@ -57,9 +57,9 @@ const agregarPermiso = async (req, res) => {
 
     // Verificar que no sea el creador de la configuración
     const { data: config } = await supabase
-      .from('configuraciones')
+      .from('workspaces')
       .select('creado_por')
-      .eq('id', configuracionId)
+      .eq('id', workspaceId)
       .single();
 
     if (config?.creado_por === usuario.id) {
@@ -70,11 +70,11 @@ const agregarPermiso = async (req, res) => {
     const { data, error } = await supabase
       .from('permisos_configuracion')
       .upsert({
-        configuracion_id: configuracionId,
+        workspace_id: workspaceId,
         usuario_id: usuario.id,
         rol: rol,
       }, {
-        onConflict: 'configuracion_id,usuario_id',
+        onConflict: 'workspace_id,usuario_id',
       })
       .select(`
         *,

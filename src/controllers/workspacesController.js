@@ -1,55 +1,55 @@
-// src/controllers/configuracionesController.js
-// Controlador para gestionar configuraciones (ej: "Lecturas_Celta")
+// src/controllers/workspacesController.js
+// Controlador para gestionar workspaces
 
 const supabase = require('../config/supabase');
 
 /**
- * Obtener todas las configuraciones del usuario autenticado
+ * Obtener todos los workspaces del usuario autenticado
  * (donde es creador o tiene permisos)
  */
-const obtenerConfiguraciones = async (req, res) => {
+const obtenerWorkspaces = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Obtener configuraciones donde soy creador
+    // Obtener workspaces donde soy creador
     const { data: propias, error: errorPropias } = await supabase
-      .from('configuraciones')
+      .from('workspaces')
       .select('*')
       .eq('creado_por', userId);
 
     if (errorPropias) throw errorPropias;
 
-    // Obtener configuraciones donde tengo permisos
+    // Obtener workspaces donde tengo permisos
     const { data: permisos, error: errorPermisos } = await supabase
       .from('permisos_configuracion')
-      .select('configuracion_id, rol, configuraciones(*)')
+      .select('workspace_id, rol, workspaces(*)')
       .eq('usuario_id', userId);
 
     if (errorPermisos) throw errorPermisos;
 
     // Combinar y formatear resultados
-    const configuraciones = [
-      ...propias.map(c => ({ ...c, rol: 'admin', esCreador: true })),
-      ...permisos.map(p => ({ ...p.configuraciones, rol: p.rol, esCreador: false })),
+    const workspaces = [
+      ...propias.map(w => ({ ...w, rol: 'admin', esCreador: true })),
+      ...permisos.map(p => ({ ...p.workspaces, rol: p.rol, esCreador: false })),
     ];
 
     // Eliminar duplicados (si soy creador y tengo permiso)
-    const unicas = configuraciones.filter((c, index, self) =>
-      index === self.findIndex(t => t.id === c.id)
+    const unicos = workspaces.filter((w, index, self) =>
+      index === self.findIndex(t => t.id === w.id)
     );
 
-    res.json(unicas);
+    res.json(unicos);
   } catch (error) {
-    console.error('Error obteniendo configuraciones:', error);
-    res.status(500).json({ error: 'Error al obtener configuraciones' });
+    console.error('Error obteniendo workspaces:', error);
+    res.status(500).json({ error: 'Error al obtener workspaces' });
   }
 };
 
 /**
- * Obtener una configuración por ID con todos sus datos
+ * Obtener un workspace por ID con todos sus datos
  * (puestos, alimentadores)
  */
-const obtenerConfiguracion = async (req, res) => {
+const obtenerWorkspace = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
 
@@ -57,12 +57,12 @@ const obtenerConfiguracion = async (req, res) => {
     // Verificar que el usuario tiene acceso
     const tieneAcceso = await verificarAcceso(id, userId);
     if (!tieneAcceso) {
-      return res.status(403).json({ error: 'No tienes acceso a esta configuración' });
+      return res.status(403).json({ error: 'No tienes acceso a este workspace' });
     }
 
-    // Obtener configuración con puestos y alimentadores
-    const { data: configuracion, error } = await supabase
-      .from('configuraciones')
+    // Obtener workspace con puestos y alimentadores
+    const { data: workspace, error } = await supabase
+      .from('workspaces')
       .select(`
         *,
         puestos (
@@ -75,21 +75,21 @@ const obtenerConfiguracion = async (req, res) => {
 
     if (error) throw error;
 
-    // Obtener el rol del usuario en esta configuración
+    // Obtener el rol del usuario en este workspace
     const rol = await obtenerRolUsuario(id, userId);
-    configuracion.rolUsuario = rol;
+    workspace.rolUsuario = rol;
 
-    res.json(configuracion);
+    res.json(workspace);
   } catch (error) {
-    console.error('Error obteniendo configuración:', error);
-    res.status(500).json({ error: 'Error al obtener configuración' });
+    console.error('Error obteniendo workspace:', error);
+    res.status(500).json({ error: 'Error al obtener workspace' });
   }
 };
 
 /**
- * Crear una nueva configuración
+ * Crear un nuevo workspace
  */
-const crearConfiguracion = async (req, res) => {
+const crearWorkspace = async (req, res) => {
   const { nombre, descripcion } = req.body;
   const userId = req.user.id;
   const userEmail = req.user.email;
@@ -104,7 +104,7 @@ const crearConfiguracion = async (req, res) => {
     await asegurarUsuarioExiste(userId, userEmail, userName);
 
     const { data, error } = await supabase
-      .from('configuraciones')
+      .from('workspaces')
       .insert({
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
@@ -117,8 +117,8 @@ const crearConfiguracion = async (req, res) => {
 
     res.status(201).json(data);
   } catch (error) {
-    console.error('Error creando configuración:', error);
-    res.status(500).json({ error: 'Error al crear configuración' });
+    console.error('Error creando workspace:', error);
+    res.status(500).json({ error: 'Error al crear workspace' });
   }
 };
 
@@ -153,9 +153,9 @@ async function asegurarUsuarioExiste(userId, email, nombre) {
 }
 
 /**
- * Actualizar una configuración
+ * Actualizar un workspace
  */
-const actualizarConfiguracion = async (req, res) => {
+const actualizarWorkspace = async (req, res) => {
   const { id } = req.params;
   const { nombre, descripcion } = req.body;
   const userId = req.user.id;
@@ -164,11 +164,11 @@ const actualizarConfiguracion = async (req, res) => {
     // Verificar que el usuario puede editar (admin o creador)
     const rol = await obtenerRolUsuario(id, userId);
     if (!['admin', 'superadmin'].includes(rol)) {
-      return res.status(403).json({ error: 'No tienes permiso para editar esta configuración' });
+      return res.status(403).json({ error: 'No tienes permiso para editar este workspace' });
     }
 
     const { data, error } = await supabase
-      .from('configuraciones')
+      .from('workspaces')
       .update({
         nombre: nombre?.trim(),
         descripcion: descripcion?.trim(),
@@ -181,41 +181,41 @@ const actualizarConfiguracion = async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error('Error actualizando configuración:', error);
-    res.status(500).json({ error: 'Error al actualizar configuración' });
+    console.error('Error actualizando workspace:', error);
+    res.status(500).json({ error: 'Error al actualizar workspace' });
   }
 };
 
 /**
- * Eliminar una configuración
+ * Eliminar un workspace
  */
-const eliminarConfiguracion = async (req, res) => {
+const eliminarWorkspace = async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
 
   try {
     // Solo el creador puede eliminar
-    const { data: config } = await supabase
-      .from('configuraciones')
+    const { data: workspace } = await supabase
+      .from('workspaces')
       .select('creado_por')
       .eq('id', id)
       .single();
 
-    if (config?.creado_por !== userId) {
-      return res.status(403).json({ error: 'Solo el creador puede eliminar la configuración' });
+    if (workspace?.creado_por !== userId) {
+      return res.status(403).json({ error: 'Solo el creador puede eliminar el workspace' });
     }
 
     const { error } = await supabase
-      .from('configuraciones')
+      .from('workspaces')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
 
-    res.json({ mensaje: 'Configuración eliminada' });
+    res.json({ mensaje: 'Workspace eliminado' });
   } catch (error) {
-    console.error('Error eliminando configuración:', error);
-    res.status(500).json({ error: 'Error al eliminar configuración' });
+    console.error('Error eliminando workspace:', error);
+    res.status(500).json({ error: 'Error al eliminar workspace' });
   }
 };
 
@@ -223,42 +223,42 @@ const eliminarConfiguracion = async (req, res) => {
 // Funciones auxiliares
 // ============================================
 
-async function verificarAcceso(configuracionId, userId) {
+async function verificarAcceso(workspaceId, userId) {
   // Verificar si es creador
-  const { data: config } = await supabase
-    .from('configuraciones')
+  const { data: workspace } = await supabase
+    .from('workspaces')
     .select('creado_por')
-    .eq('id', configuracionId)
+    .eq('id', workspaceId)
     .single();
 
-  if (config?.creado_por === userId) return true;
+  if (workspace?.creado_por === userId) return true;
 
   // Verificar si tiene permiso
   const { data: permiso } = await supabase
     .from('permisos_configuracion')
     .select('id')
-    .eq('configuracion_id', configuracionId)
+    .eq('workspace_id', workspaceId)
     .eq('usuario_id', userId)
     .single();
 
   return !!permiso;
 }
 
-async function obtenerRolUsuario(configuracionId, userId) {
+async function obtenerRolUsuario(workspaceId, userId) {
   // Verificar si es creador
-  const { data: config } = await supabase
-    .from('configuraciones')
+  const { data: workspace } = await supabase
+    .from('workspaces')
     .select('creado_por')
-    .eq('id', configuracionId)
+    .eq('id', workspaceId)
     .single();
 
-  if (config?.creado_por === userId) return 'admin';
+  if (workspace?.creado_por === userId) return 'admin';
 
   // Obtener rol desde permisos
   const { data: permiso } = await supabase
     .from('permisos_configuracion')
     .select('rol')
-    .eq('configuracion_id', configuracionId)
+    .eq('workspace_id', workspaceId)
     .eq('usuario_id', userId)
     .single();
 
@@ -266,9 +266,9 @@ async function obtenerRolUsuario(configuracionId, userId) {
 }
 
 module.exports = {
-  obtenerConfiguraciones,
-  obtenerConfiguracion,
-  crearConfiguracion,
-  actualizarConfiguracion,
-  eliminarConfiguracion,
+  obtenerWorkspaces,
+  obtenerWorkspace,
+  crearWorkspace,
+  actualizarWorkspace,
+  eliminarWorkspace,
 };

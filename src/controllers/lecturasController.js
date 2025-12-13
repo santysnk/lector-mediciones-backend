@@ -75,19 +75,19 @@ async function obtenerLecturasHistoricas(req, res) {
 }
 
 /**
- * Obtiene la última lectura de todos los alimentadores de una configuración
- * GET /api/configuraciones/:configuracionId/lecturas/ultima
+ * Obtiene la última lectura de todos los alimentadores de un workspace
+ * GET /api/workspaces/:workspaceId/lecturas/ultima
  */
-async function obtenerUltimaLecturaPorConfiguracion(req, res) {
+async function obtenerUltimaLecturaPorWorkspace(req, res) {
   try {
-    const { configuracionId } = req.params;
+    const { workspaceId } = req.params;
     const { tipo } = req.query;
 
-    // Primero obtener los puestos de la configuración
+    // Primero obtener los puestos del workspace
     const { data: puestos, error: errorPuestos } = await supabase
       .from('puestos')
       .select('id')
-      .eq('configuracion_id', configuracionId);
+      .eq('workspace_id', workspaceId);
 
     if (errorPuestos) {
       return res.status(500).json({ error: errorPuestos.message });
@@ -145,5 +145,5 @@ async function obtenerUltimaLecturaPorConfiguracion(req, res) {
 module.exports = {
   obtenerUltimasLecturas,
   obtenerLecturasHistoricas,
-  obtenerUltimaLecturaPorConfiguracion,
+  obtenerUltimaLecturaPorWorkspace,
 };

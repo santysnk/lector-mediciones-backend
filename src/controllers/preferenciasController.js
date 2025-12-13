@@ -7,7 +7,7 @@ const supabase = require('../config/supabase');
  * Obtener preferencias del usuario para una configuración
  */
 const obtenerPreferencias = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
   const userId = req.user.id;
 
   try {
@@ -15,7 +15,7 @@ const obtenerPreferencias = async (req, res) => {
       .from('preferencias_usuario')
       .select('*')
       .eq('usuario_id', userId)
-      .eq('configuracion_id', configuracionId)
+      .eq('workspace_id', workspaceId)
       .single();
 
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -35,7 +35,7 @@ const obtenerPreferencias = async (req, res) => {
  * (colores, orden de tarjetas, gaps, etc.)
  */
 const guardarPreferencias = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
   const { preferencias } = req.body;
   const userId = req.user.id;
 
@@ -48,10 +48,10 @@ const guardarPreferencias = async (req, res) => {
       .from('preferencias_usuario')
       .upsert({
         usuario_id: userId,
-        configuracion_id: configuracionId,
+        workspace_id: workspaceId,
         preferencias: preferencias,
       }, {
-        onConflict: 'usuario_id,configuracion_id',
+        onConflict: 'usuario_id,workspace_id',
       })
       .select()
       .single();
@@ -69,7 +69,7 @@ const guardarPreferencias = async (req, res) => {
  * Actualizar preferencias parcialmente (merge)
  */
 const actualizarPreferencias = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
   const { preferencias: nuevasPreferencias } = req.body;
   const userId = req.user.id;
 
@@ -79,7 +79,7 @@ const actualizarPreferencias = async (req, res) => {
       .from('preferencias_usuario')
       .select('preferencias')
       .eq('usuario_id', userId)
-      .eq('configuracion_id', configuracionId)
+      .eq('workspace_id', workspaceId)
       .single();
 
     // Merge con las nuevas
@@ -92,10 +92,10 @@ const actualizarPreferencias = async (req, res) => {
       .from('preferencias_usuario')
       .upsert({
         usuario_id: userId,
-        configuracion_id: configuracionId,
+        workspace_id: workspaceId,
         preferencias: preferenciasActualizadas,
       }, {
-        onConflict: 'usuario_id,configuracion_id',
+        onConflict: 'usuario_id,workspace_id',
       })
       .select()
       .single();
@@ -113,7 +113,7 @@ const actualizarPreferencias = async (req, res) => {
  * Eliminar preferencias del usuario
  */
 const eliminarPreferencias = async (req, res) => {
-  const { configuracionId } = req.params;
+  const { workspaceId } = req.params;
   const userId = req.user.id;
 
   try {
@@ -121,7 +121,7 @@ const eliminarPreferencias = async (req, res) => {
       .from('preferencias_usuario')
       .delete()
       .eq('usuario_id', userId)
-      .eq('configuracion_id', configuracionId);
+      .eq('workspace_id', workspaceId);
 
     if (error) throw error;
 

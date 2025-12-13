@@ -7,7 +7,7 @@ const router = express.Router();
 const { verificarToken } = require('../middleware/auth');
 
 // Importar controladores
-const configuracionesController = require('../controllers/configuracionesController');
+const workspacesController = require('../controllers/workspacesController');
 const puestosController = require('../controllers/puestosController');
 const alimentadoresController = require('../controllers/alimentadoresController');
 const permisosController = require('../controllers/permisosController');
@@ -23,20 +23,20 @@ router.get('/health', (req, res) => {
 });
 
 // ============================================
-// Rutas de configuraciones
+// Rutas de workspaces
 // ============================================
-router.get('/configuraciones', verificarToken, configuracionesController.obtenerConfiguraciones);
-router.get('/configuraciones/:id', verificarToken, configuracionesController.obtenerConfiguracion);
-router.post('/configuraciones', verificarToken, configuracionesController.crearConfiguracion);
-router.put('/configuraciones/:id', verificarToken, configuracionesController.actualizarConfiguracion);
-router.delete('/configuraciones/:id', verificarToken, configuracionesController.eliminarConfiguracion);
+router.get('/workspaces', verificarToken, workspacesController.obtenerWorkspaces);
+router.get('/workspaces/:id', verificarToken, workspacesController.obtenerWorkspace);
+router.post('/workspaces', verificarToken, workspacesController.crearWorkspace);
+router.put('/workspaces/:id', verificarToken, workspacesController.actualizarWorkspace);
+router.delete('/workspaces/:id', verificarToken, workspacesController.eliminarWorkspace);
 
 // ============================================
 // Rutas de puestos
 // ============================================
-router.get('/configuraciones/:configuracionId/puestos', verificarToken, puestosController.obtenerPuestos);
-router.post('/configuraciones/:configuracionId/puestos', verificarToken, puestosController.crearPuesto);
-router.put('/configuraciones/:configuracionId/puestos/reordenar', verificarToken, puestosController.reordenarPuestos);
+router.get('/workspaces/:workspaceId/puestos', verificarToken, puestosController.obtenerPuestos);
+router.post('/workspaces/:workspaceId/puestos', verificarToken, puestosController.crearPuesto);
+router.put('/workspaces/:workspaceId/puestos/reordenar', verificarToken, puestosController.reordenarPuestos);
 router.put('/puestos/:id', verificarToken, puestosController.actualizarPuesto);
 router.delete('/puestos/:id', verificarToken, puestosController.eliminarPuesto);
 
@@ -53,25 +53,25 @@ router.delete('/alimentadores/:id', verificarToken, alimentadoresController.elim
 // ============================================
 // Rutas de permisos
 // ============================================
-router.get('/configuraciones/:configuracionId/permisos', verificarToken, permisosController.obtenerPermisos);
-router.post('/configuraciones/:configuracionId/permisos', verificarToken, permisosController.agregarPermiso);
+router.get('/workspaces/:workspaceId/permisos', verificarToken, permisosController.obtenerPermisos);
+router.post('/workspaces/:workspaceId/permisos', verificarToken, permisosController.agregarPermiso);
 router.put('/permisos/:id', verificarToken, permisosController.actualizarPermiso);
 router.delete('/permisos/:id', verificarToken, permisosController.eliminarPermiso);
 
 // ============================================
 // Rutas de preferencias de usuario
 // ============================================
-router.get('/configuraciones/:configuracionId/preferencias', verificarToken, preferenciasController.obtenerPreferencias);
-router.post('/configuraciones/:configuracionId/preferencias', verificarToken, preferenciasController.guardarPreferencias);
-router.patch('/configuraciones/:configuracionId/preferencias', verificarToken, preferenciasController.actualizarPreferencias);
-router.delete('/configuraciones/:configuracionId/preferencias', verificarToken, preferenciasController.eliminarPreferencias);
+router.get('/workspaces/:workspaceId/preferencias', verificarToken, preferenciasController.obtenerPreferencias);
+router.post('/workspaces/:workspaceId/preferencias', verificarToken, preferenciasController.guardarPreferencias);
+router.patch('/workspaces/:workspaceId/preferencias', verificarToken, preferenciasController.actualizarPreferencias);
+router.delete('/workspaces/:workspaceId/preferencias', verificarToken, preferenciasController.eliminarPreferencias);
 
 // ============================================
 // Rutas de lecturas
 // ============================================
 router.get('/alimentadores/:alimentadorId/lecturas', verificarToken, lecturasController.obtenerUltimasLecturas);
 router.get('/alimentadores/:alimentadorId/lecturas/historico', verificarToken, lecturasController.obtenerLecturasHistoricas);
-router.get('/configuraciones/:configuracionId/lecturas/ultima', verificarToken, lecturasController.obtenerUltimaLecturaPorConfiguracion);
+router.get('/workspaces/:workspaceId/lecturas/ultima', verificarToken, lecturasController.obtenerUltimaLecturaPorWorkspace);
 
 // ============================================
 // Rutas de test de conexión Modbus
