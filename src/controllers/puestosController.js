@@ -83,9 +83,6 @@ const actualizarPuesto = async (req, res) => {
   const { id } = req.params;
   const { nombre, descripcion, orden, color, bg_color } = req.body;
 
-  console.log('🔧 actualizarPuesto - ID:', id);
-  console.log('🔧 actualizarPuesto - Body:', { nombre, descripcion, orden, color, bg_color });
-
   try {
     const updates = {};
     if (nombre !== undefined) updates.nombre = nombre.trim();
@@ -94,8 +91,6 @@ const actualizarPuesto = async (req, res) => {
     if (color !== undefined) updates.color = color;
     if (bg_color !== undefined) updates.bg_color = bg_color;
 
-    console.log('🔧 actualizarPuesto - Updates a enviar:', updates);
-
     const { data, error } = await supabase
       .from('puestos')
       .update(updates)
@@ -103,15 +98,11 @@ const actualizarPuesto = async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      console.error('❌ Error de Supabase:', error);
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log('✅ Puesto actualizado en DB:', data);
     res.json(data);
   } catch (error) {
-    console.error('❌ Error actualizando puesto:', error);
+    console.error('Error actualizando puesto:', error);
     res.status(500).json({ error: 'Error al actualizar puesto' });
   }
 };
