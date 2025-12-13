@@ -33,7 +33,7 @@ const obtenerPuestos = async (req, res) => {
  */
 const crearPuesto = async (req, res) => {
   const { configuracionId } = req.params;
-  const { nombre, descripcion, orden } = req.body;
+  const { nombre, descripcion, orden, color, bg_color } = req.body;
 
   if (!nombre || nombre.trim() === '') {
     return res.status(400).json({ error: 'El nombre es requerido' });
@@ -61,6 +61,8 @@ const crearPuesto = async (req, res) => {
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
         orden: nuevoOrden,
+        color: color || '#22c55e',
+        bg_color: bg_color || '#e5e7eb',
       })
       .select()
       .single();
@@ -79,13 +81,15 @@ const crearPuesto = async (req, res) => {
  */
 const actualizarPuesto = async (req, res) => {
   const { id } = req.params;
-  const { nombre, descripcion, orden } = req.body;
+  const { nombre, descripcion, orden, color, bg_color } = req.body;
 
   try {
     const updates = {};
     if (nombre !== undefined) updates.nombre = nombre.trim();
     if (descripcion !== undefined) updates.descripcion = descripcion?.trim() || null;
     if (orden !== undefined) updates.orden = orden;
+    if (color !== undefined) updates.color = color;
+    if (bg_color !== undefined) updates.bg_color = bg_color;
 
     const { data, error } = await supabase
       .from('puestos')
