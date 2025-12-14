@@ -362,57 +362,36 @@ async function toggleActivo(req, res) {
 
 /**
  * POST /api/registradores/test-conexion
- * Prueba la conexión Modbus a un registrador
+ * Prueba la conexión Modbus a un registrador via el agente conectado por WebSocket
+ * Reutiliza la lógica de testConexionController con rate limiting de 60s por IP
  */
 async function testConexion(req, res) {
   try {
     const { ip, puerto, indiceInicial, cantidadRegistros, unitId = 1 } = req.body;
 
-    if (!ip || !puerto || !indiceInicial || !cantidadRegistros) {
+    if (!ip || !puerto || indiceInicial === undefined || !cantidadRegistros) {
       return res.status(400).json({ error: 'Faltan parámetros de conexión' });
     }
 
-    // Importar módulo Modbus
-    const ModbusRTU = require('modbus-serial');
-    const client = new ModbusRTU();
+    // Importar la lógica de test conexión existente (que usa WebSocket al agente)
+    const testConexionController = require('./testConexionController');
 
-    // Timeout de conexión
-    client.setTimeout(5000);
+    // Crear un req simulado para reutilizar la lógica
+    const reqSimulado = {
+      body: {
+        ip,
+        puerto: parseInt(puerto),
+        unitId: parseInt(unitId),
+        indiceInicial: parseInt(indiceInicial),
+        cantRegistros: parseInt(cantidadRegistros),
+      }
+    };
 
-    try {
-      await client.connectTCP(ip, { port: parseInt(puerto) });
-      client.setID(parseInt(unitId));
-
-      // Leer registros
-      const data = await client.readHoldingRegisters(parseInt(indiceInicial), parseInt(cantidadRegistros));
-
-      await client.close();
-
-      // Formatear resultados
-      const registros = data.data.map((valor, index) => ({
-        indice: parseInt(indiceInicial) + index,
-        valor: valor,
-      }));
-
-      res.json({
-        exito: true,
-        mensaje: 'Conexión exitosa',
-        registros,
-        timestamp: new Date().toISOString()
-      });
-
-    } catch (modbusError) {
-      try { await client.close(); } catch (e) {}
-
-      res.json({
-        exito: false,
-        mensaje: `Error de conexión: ${modbusError.message}`,
-        registros: []
-      });
-    }
+    // Llamar al controlador existente que maneja todo: rate limiting, WebSocket, etc.
+    await testConexionController.testConexion(reqSimulado, res);
 
   } catch (err) {
-    console.error('Error en testConexion:', err);
+    console.error('Error en testConexion registradores:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
