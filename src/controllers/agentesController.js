@@ -117,7 +117,7 @@ async function registrarLogAgente(agenteId, accion, ip, detalles = {}, exito = t
 async function solicitarVinculacion(req, res) {
   try {
     const { workspaceId } = req.body;
-    const usuarioId = req.usuario.id;
+    const usuarioId = req.user.id;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
@@ -288,7 +288,7 @@ async function validarVinculacion(codigo, agenteId, ip) {
 async function obtenerEstadoVinculacion(req, res) {
   try {
     const { workspaceId } = req.query;
-    const usuarioId = req.usuario.id;
+    const usuarioId = req.user.id;
 
     console.log('[obtenerEstadoVinculacion] Iniciando con workspaceId:', workspaceId, 'usuarioId:', usuarioId);
 
@@ -394,7 +394,7 @@ async function obtenerEstadoVinculacion(req, res) {
 async function desvincularAgente(req, res) {
   try {
     const { workspaceId } = req.body;
-    const usuarioId = req.usuario.id;
+    const usuarioId = req.user.id;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
@@ -438,7 +438,7 @@ async function desvincularAgente(req, res) {
 async function rotarClave(req, res) {
   try {
     const { workspaceId } = req.body;
-    const usuarioId = req.usuario.id;
+    const usuarioId = req.user.id;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
