@@ -370,6 +370,23 @@ async function toggleActivo(req, res) {
       return res.status(500).json({ error: 'Error actualizando estado' });
     }
 
+    // Notificar al agente que debe recargar sus registradores
+    // Importar io del index.js
+    try {
+      const { io, agentesConectados } = require('../index');
+      if (io && agentesConectados) {
+        // Emitir evento a todos los agentes conectados
+        io.emit('registradores:actualizar', {
+          agenteId: registrador.agente_id,
+          registradorId: id,
+          activo: activo,
+        });
+        console.log(`[Registradores] Notificando agente ${registrador.agente_id} sobre cambio en registrador ${id}`);
+      }
+    } catch (notifyErr) {
+      console.error('Error notificando al agente:', notifyErr.message);
+    }
+
     res.json({
       registrador,
       mensaje: activo ? 'Medición iniciada' : 'Medición detenida'
