@@ -290,11 +290,14 @@ async function obtenerEstadoVinculacion(req, res) {
     const { workspaceId } = req.query;
     const usuarioId = req.usuario.id;
 
+    console.log('[obtenerEstadoVinculacion] Iniciando con workspaceId:', workspaceId, 'usuarioId:', usuarioId);
+
     if (!workspaceId) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
     // Verificar permisos
+    console.log('[obtenerEstadoVinculacion] Verificando permisos...');
     const { data: permiso, error: errorPermiso } = await supabase
       .from('permisos_configuracion')
       .select('rol')
@@ -303,11 +306,13 @@ async function obtenerEstadoVinculacion(req, res) {
       .single();
 
     if (errorPermiso || !permiso) {
-      console.log('Error permiso:', errorPermiso);
+      console.log('[obtenerEstadoVinculacion] Error permiso:', errorPermiso);
       return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
     }
+    console.log('[obtenerEstadoVinculacion] Permiso OK:', permiso.rol);
 
     // Obtener workspace (sin join por ahora)
+    console.log('[obtenerEstadoVinculacion] Obteniendo workspace...');
     const { data: workspace, error: errorWorkspace } = await supabase
       .from('workspaces')
       .select('id, nombre, agente_id')
@@ -315,13 +320,15 @@ async function obtenerEstadoVinculacion(req, res) {
       .single();
 
     if (errorWorkspace || !workspace) {
-      console.log('Error workspace:', errorWorkspace);
+      console.log('[obtenerEstadoVinculacion] Error workspace:', errorWorkspace);
       return res.status(404).json({ error: 'Workspace no encontrado' });
     }
+    console.log('[obtenerEstadoVinculacion] Workspace OK:', workspace.nombre, 'agente_id:', workspace.agente_id);
 
     // Obtener datos del agente por separado si existe
     let agenteData = null;
     if (workspace.agente_id) {
+      console.log('[obtenerEstadoVinculacion] Obteniendo agente...');
       const { data: agente, error: errorAgente } = await supabase
         .from('agentes')
         .select('id, nombre, activo')
@@ -330,11 +337,15 @@ async function obtenerEstadoVinculacion(req, res) {
 
       if (!errorAgente && agente) {
         agenteData = agente;
+        console.log('[obtenerEstadoVinculacion] Agente OK:', agente.nombre);
+      } else {
+        console.log('[obtenerEstadoVinculacion] Error agente:', errorAgente);
       }
     }
 
     // Verificar si hay código pendiente (sin .single() para evitar error si no hay resultados)
-    const { data: codigosPendientes } = await supabase
+    console.log('[obtenerEstadoVinculacion] Buscando códigos pendientes...');
+    const { data: codigosPendientes, error: errorCodigos } = await supabase
       .from('codigos_vinculacion')
       .select('codigo, expira_at')
       .eq('workspace_id', workspaceId)
@@ -344,11 +355,17 @@ async function obtenerEstadoVinculacion(req, res) {
       .order('created_at', { ascending: false })
       .limit(1);
 
+    if (errorCodigos) {
+      console.log('[obtenerEstadoVinculacion] Error códigos:', errorCodigos);
+    }
+
     const codigoPendiente = codigosPendientes && codigosPendientes.length > 0
       ? codigosPendientes[0]
       : null;
 
-    res.json({
+    console.log('[obtenerEstadoVinculacion] Código pendiente:', codigoPendiente ? 'Sí' : 'No');
+
+    const respuesta = {
       vinculado: !!workspace.agente_id,
       agente: agenteData ? {
         id: agenteData.id,
@@ -359,10 +376,13 @@ async function obtenerEstadoVinculacion(req, res) {
         codigo: codigoPendiente.codigo,
         expiraAt: codigoPendiente.expira_at,
       } : null,
-    });
+    };
+
+    console.log('[obtenerEstadoVinculacion] Enviando respuesta:', JSON.stringify(respuesta));
+    res.json(respuesta);
 
   } catch (err) {
-    console.error('Error en obtenerEstadoVinculacion:', err);
+    console.error('[obtenerEstadoVinculacion] ERROR CATCH:', err.message, err.stack);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
