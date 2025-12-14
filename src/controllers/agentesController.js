@@ -295,30 +295,46 @@ async function obtenerEstadoVinculacion(req, res) {
     }
 
     // Verificar permisos
-    const { data: permiso } = await supabase
+    const { data: permiso, error: errorPermiso } = await supabase
       .from('permisos_configuracion')
       .select('rol')
       .eq('workspace_id', workspaceId)
       .eq('usuario_id', usuarioId)
       .single();
 
-    if (!permiso) {
+    if (errorPermiso || !permiso) {
+      console.log('Error permiso:', errorPermiso);
       return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
     }
 
-    // Obtener workspace con agente
-    const { data: workspace, error } = await supabase
+    // Obtener workspace (sin join por ahora)
+    const { data: workspace, error: errorWorkspace } = await supabase
       .from('workspaces')
-      .select('id, nombre, agente_id, agentes(id, nombre, activo)')
+      .select('id, nombre, agente_id')
       .eq('id', workspaceId)
       .single();
 
-    if (error || !workspace) {
+    if (errorWorkspace || !workspace) {
+      console.log('Error workspace:', errorWorkspace);
       return res.status(404).json({ error: 'Workspace no encontrado' });
     }
 
-    // Verificar si hay código pendiente
-    const { data: codigoPendiente } = await supabase
+    // Obtener datos del agente por separado si existe
+    let agenteData = null;
+    if (workspace.agente_id) {
+      const { data: agente, error: errorAgente } = await supabase
+        .from('agentes')
+        .select('id, nombre, activo')
+        .eq('id', workspace.agente_id)
+        .single();
+
+      if (!errorAgente && agente) {
+        agenteData = agente;
+      }
+    }
+
+    // Verificar si hay código pendiente (sin .single() para evitar error si no hay resultados)
+    const { data: codigosPendientes } = await supabase
       .from('codigos_vinculacion')
       .select('codigo, expira_at')
       .eq('workspace_id', workspaceId)
@@ -326,15 +342,18 @@ async function obtenerEstadoVinculacion(req, res) {
       .eq('usado', false)
       .gt('expira_at', new Date().toISOString())
       .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    const codigoPendiente = codigosPendientes && codigosPendientes.length > 0
+      ? codigosPendientes[0]
+      : null;
 
     res.json({
       vinculado: !!workspace.agente_id,
-      agente: workspace.agentes ? {
-        id: workspace.agentes.id,
-        nombre: workspace.agentes.nombre,
-        activo: workspace.agentes.activo,
+      agente: agenteData ? {
+        id: agenteData.id,
+        nombre: agenteData.nombre,
+        activo: agenteData.activo,
       } : null,
       codigoPendiente: codigoPendiente ? {
         codigo: codigoPendiente.codigo,
