@@ -8,6 +8,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const routes = require('./routes');
+const { verificarClaveAgente, validarVinculacion, registrarLogAgente } = require('./controllers/agentesController');
 
 const app = express();
 const server = http.createServer(app);
@@ -43,24 +44,70 @@ const agentesConectados = new Map();
 // Manejar conexiones de agentes
 io.on('connection', (socket) => {
   console.log(`[Socket.IO] Nueva conexión: ${socket.id}`);
+  const clientIp = socket.handshake.address;
 
-  // El agente se registra con su identificación
-  socket.on('agente:registrar', (datos) => {
-    const { agenteId, configuracionId } = datos;
+  // El agente se autentica con su clave secreta
+  socket.on('agente:autenticar', async (datos) => {
+    const { claveSecreta } = datos;
 
+    if (!claveSecreta) {
+      socket.emit('agente:autenticado', {
+        exito: false,
+        error: 'Clave secreta requerida',
+      });
+      return;
+    }
+
+    // Verificar clave contra la BD
+    const resultado = await verificarClaveAgente(claveSecreta);
+
+    if (!resultado.valido) {
+      console.log(`[Socket.IO] Autenticación fallida desde ${clientIp}`);
+      socket.emit('agente:autenticado', {
+        exito: false,
+        error: resultado.error || 'Clave inválida',
+      });
+      return;
+    }
+
+    // Registrar agente conectado
     agentesConectados.set(socket.id, {
-      agenteId,
-      configuracionId,
+      agenteId: resultado.agente.id,
+      nombre: resultado.agente.nombre,
       conectadoEn: new Date(),
       socket,
+      ip: clientIp,
     });
 
-    console.log(`[Socket.IO] Agente registrado: ${agenteId} (config: ${configuracionId?.substring(0, 8)}...)`);
+    console.log(`[Socket.IO] Agente autenticado: ${resultado.agente.nombre} (${resultado.agente.id.substring(0, 8)}...)`);
 
-    socket.emit('agente:registrado', {
+    // Registrar log de autenticación
+    await registrarLogAgente(resultado.agente.id, 'autenticacion', clientIp, {
+      usoClavePrincipal: resultado.usoClavePrincipal,
+    }, true);
+
+    socket.emit('agente:autenticado', {
       exito: true,
-      mensaje: 'Agente registrado correctamente',
+      agente: resultado.agente,
+      advertencia: resultado.advertencia,
     });
+  });
+
+  // El agente envía código de vinculación
+  socket.on('agente:vincular', async (datos) => {
+    const { codigo } = datos;
+    const agenteInfo = agentesConectados.get(socket.id);
+
+    if (!agenteInfo) {
+      socket.emit('agente:vinculado', {
+        exito: false,
+        error: 'Agente no autenticado',
+      });
+      return;
+    }
+
+    const resultado = await validarVinculacion(codigo, agenteInfo.agenteId, clientIp);
+    socket.emit('agente:vinculado', resultado);
   });
 
   // El agente responde a un test de conexión Modbus
@@ -79,7 +126,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     const agente = agentesConectados.get(socket.id);
     if (agente) {
-      console.log(`[Socket.IO] Agente desconectado: ${agente.agenteId}`);
+      console.log(`[Socket.IO] Agente desconectado: ${agente.nombre || agente.agenteId}`);
       agentesConectados.delete(socket.id);
     } else {
       console.log(`[Socket.IO] Conexión cerrada: ${socket.id}`);

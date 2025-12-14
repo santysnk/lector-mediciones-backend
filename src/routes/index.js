@@ -14,6 +14,7 @@ const permisosController = require('../controllers/permisosController');
 const preferenciasController = require('../controllers/preferenciasController');
 const lecturasController = require('../controllers/lecturasController');
 const testConexionController = require('../controllers/testConexionController');
+const agentesController = require('../controllers/agentesController');
 
 // ============================================
 // Rutas de salud/status
@@ -78,5 +79,13 @@ router.get('/workspaces/:workspaceId/lecturas/ultima', verificarToken, lecturasC
 // ============================================
 router.post('/test-conexion', verificarToken, testConexionController.testConexion);
 router.get('/test-conexion/estado', verificarToken, testConexionController.obtenerEstado);
+
+// ============================================
+// Rutas de agentes
+// ============================================
+router.post('/agentes/solicitar-vinculacion', verificarToken, agentesController.solicitarVinculacion);
+router.get('/agentes/estado', verificarToken, agentesController.obtenerEstadoVinculacion);
+router.post('/agentes/desvincular', verificarToken, agentesController.desvincularAgente);
+router.post('/agentes/rotar-clave', verificarToken, agentesController.rotarClave);
 
 module.exports = router;
