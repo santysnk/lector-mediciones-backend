@@ -327,17 +327,27 @@ async function obtenerEstadoVinculacion(req, res) {
 
     // Obtener datos del agente por separado si existe
     let agenteData = null;
+    let conectado = false;
     if (workspace.agente_id) {
       console.log('[obtenerEstadoVinculacion] Obteniendo agente...');
       const { data: agente, error: errorAgente } = await supabase
         .from('agentes')
-        .select('id, nombre, activo')
+        .select('id, nombre, activo, ultimo_ping')
         .eq('id', workspace.agente_id)
         .single();
 
       if (!errorAgente && agente) {
         agenteData = agente;
         console.log('[obtenerEstadoVinculacion] Agente OK:', agente.nombre);
+
+        // Determinar si está conectado (último ping hace menos de 60 segundos)
+        if (agente.ultimo_ping) {
+          const ultimoPing = new Date(agente.ultimo_ping).getTime();
+          const ahora = Date.now();
+          const diferencia = ahora - ultimoPing;
+          conectado = diferencia < 60000; // 60 segundos
+          console.log('[obtenerEstadoVinculacion] Último ping hace:', Math.round(diferencia / 1000), 's, conectado:', conectado);
+        }
       } else {
         console.log('[obtenerEstadoVinculacion] Error agente:', errorAgente);
       }
@@ -367,10 +377,12 @@ async function obtenerEstadoVinculacion(req, res) {
 
     const respuesta = {
       vinculado: !!workspace.agente_id,
+      conectado, // true si ultimo_ping < 60s
       agente: agenteData ? {
         id: agenteData.id,
         nombre: agenteData.nombre,
         activo: agenteData.activo,
+        ultimoPing: agenteData.ultimo_ping,
       } : null,
       codigoPendiente: codigoPendiente ? {
         codigo: codigoPendiente.codigo,

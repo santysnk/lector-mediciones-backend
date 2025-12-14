@@ -9,6 +9,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const routes = require('./routes');
 const { verificarClaveAgente, validarVinculacion, registrarLogAgente } = require('./controllers/agentesController');
+const supabase = require('./config/supabase');
 
 const app = express();
 const server = http.createServer(app);
@@ -119,6 +120,26 @@ io.on('connection', (socket) => {
     const { procesarRespuestaTest } = module.exports;
     if (procesarRespuestaTest) {
       procesarRespuestaTest(requestId, resultado);
+    }
+  });
+
+  // El agente envía ping periódico para indicar que está vivo
+  socket.on('agente:ping', async () => {
+    const agenteInfo = agentesConectados.get(socket.id);
+
+    if (agenteInfo) {
+      // Actualizar ultimo_ping en la BD
+      const { error } = await supabase
+        .from('agentes')
+        .update({ ultimo_ping: new Date().toISOString() })
+        .eq('id', agenteInfo.agenteId);
+
+      if (error) {
+        console.error(`[Socket.IO] Error actualizando ping:`, error.message);
+      }
+
+      // Responder con pong
+      socket.emit('agente:pong', { timestamp: Date.now() });
     }
   });
 
