@@ -392,7 +392,7 @@ async function testConexion(req, res) {
 
   } catch (err) {
     console.error('Error en testConexion registradores:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ error: err.message || 'Error interno del servidor' });
   }
 }
 
