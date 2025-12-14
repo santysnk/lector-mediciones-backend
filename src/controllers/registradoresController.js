@@ -144,7 +144,7 @@ async function crearRegistrador(req, res) {
 
     if (errorCrear) {
       console.error('Error creando registrador:', errorCrear);
-      return res.status(500).json({ error: 'Error creando registrador' });
+      return res.status(500).json({ error: `Error creando registrador: ${errorCrear.message}` });
     }
 
     // Crear tabla dinámica de lecturas
