@@ -122,6 +122,23 @@ async function crearRegistrador(req, res) {
     // Generar nombre de tabla sanitizado
     const nombreTabla = `lecturas_${sanitizarNombreTabla(nombre)}_${Date.now()}`;
 
+    // Log de datos a insertar
+    const datosInsertar = {
+      agente_id: workspace.agente_id,
+      nombre,
+      tipo: tipo || null,
+      ubicacion: ubicacion || null,
+      ip,
+      puerto: parseInt(puerto),
+      unit_id: 1,
+      indice_inicial: parseInt(indiceInicial),
+      cantidad_registros: parseInt(cantidadRegistros),
+      intervalo_segundos: parseInt(intervaloSegundos) || 60,
+      activo: false,
+      tabla_lecturas: nombreTabla,
+    };
+    console.log('Intentando insertar registrador:', JSON.stringify(datosInsertar, null, 2));
+
     // Crear el registrador
     const { data: registrador, error: errorCrear } = await supabase
       .from('registradores')
