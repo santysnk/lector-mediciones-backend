@@ -87,10 +87,18 @@ io.on('connection', (socket) => {
       usoClavePrincipal: resultado.usoClavePrincipal,
     }, true);
 
+    // Buscar si hay un workspace vinculado a este agente
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('id, nombre')
+      .eq('agente_id', resultado.agente.id)
+      .single();
+
     socket.emit('agente:autenticado', {
       exito: true,
       agente: resultado.agente,
       advertencia: resultado.advertencia,
+      workspace: workspace || null,
     });
   });
 
