@@ -15,6 +15,7 @@ const preferenciasController = require('../controllers/preferenciasController');
 const lecturasController = require('../controllers/lecturasController');
 const testConexionController = require('../controllers/testConexionController');
 const agentesController = require('../controllers/agentesController');
+const registradoresController = require('../controllers/registradoresController');
 
 // ============================================
 // Rutas de salud/status
@@ -87,5 +88,15 @@ router.post('/agentes/solicitar-vinculacion', verificarToken, agentesController.
 router.get('/agentes/estado', verificarToken, agentesController.obtenerEstadoVinculacion);
 router.post('/agentes/desvincular', verificarToken, agentesController.desvincularAgente);
 router.post('/agentes/rotar-clave', verificarToken, agentesController.rotarClave);
+
+// ============================================
+// Rutas de registradores
+// ============================================
+router.get('/registradores', verificarToken, registradoresController.obtenerRegistradores);
+router.post('/registradores', verificarToken, registradoresController.crearRegistrador);
+router.put('/registradores/:id', verificarToken, registradoresController.actualizarRegistrador);
+router.delete('/registradores/:id', verificarToken, registradoresController.eliminarRegistrador);
+router.post('/registradores/:id/toggle-activo', verificarToken, registradoresController.toggleActivo);
+router.post('/registradores/test-conexion', verificarToken, registradoresController.testConexion);
 
 module.exports = router;
