@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 
 const { verificarToken } = require('../middleware/auth');
+const { verificarTokenAgente } = require('../middleware/authAgente');
 
 // Importar controladores
 const workspacesController = require('../controllers/workspacesController');
@@ -16,6 +17,7 @@ const lecturasController = require('../controllers/lecturasController');
 const testConexionController = require('../controllers/testConexionController');
 const agentesController = require('../controllers/agentesController');
 const registradoresController = require('../controllers/registradoresController');
+const agenteApiController = require('../controllers/agenteApiController');
 
 // ============================================
 // Rutas de salud/status
@@ -98,5 +100,18 @@ router.put('/registradores/:id', verificarToken, registradoresController.actuali
 router.delete('/registradores/:id', verificarToken, registradoresController.eliminarRegistrador);
 router.post('/registradores/:id/toggle-activo', verificarToken, registradoresController.toggleActivo);
 router.post('/registradores/test-conexion', verificarToken, registradoresController.testConexion);
+
+// ============================================
+// Rutas REST para agentes (reemplaza WebSocket)
+// ============================================
+// Sin autenticación (el agente se autentica con clave secreta)
+router.post('/agente/auth', agenteApiController.autenticar);
+
+// Con autenticación JWT del agente
+router.post('/agente/heartbeat', verificarTokenAgente, agenteApiController.heartbeat);
+router.get('/agente/config', verificarTokenAgente, agenteApiController.obtenerConfiguracion);
+router.post('/agente/lecturas', verificarTokenAgente, agenteApiController.enviarLecturas);
+router.post('/agente/log', verificarTokenAgente, agenteApiController.enviarLog);
+router.post('/agente/vincular', verificarTokenAgente, agenteApiController.vincular);
 
 module.exports = router;
