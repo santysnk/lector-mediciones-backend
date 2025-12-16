@@ -5,40 +5,33 @@ const supabase = require('../config/supabase');
 
 /**
  * Obtener todos los workspaces del usuario autenticado
- * (donde es creador o tiene permisos)
+ * (donde tiene asignación en usuario_workspaces)
  */
 const obtenerWorkspaces = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Obtener workspaces donde soy creador
-    const { data: propias, error: errorPropias } = await supabase
-      .from('workspaces')
-      .select('*')
-      .eq('creado_por', userId);
-
-    if (errorPropias) throw errorPropias;
-
-    // Obtener workspaces donde tengo permisos
-    const { data: permisos, error: errorPermisos } = await supabase
-      .from('permisos_configuracion')
-      .select('workspace_id, rol, workspaces(*)')
+    // Obtener workspaces donde el usuario tiene asignación
+    const { data: asignaciones, error: errorAsignaciones } = await supabase
+      .from('usuario_workspaces')
+      .select(`
+        workspace_id,
+        rol_id,
+        roles (nombre),
+        workspaces (*)
+      `)
       .eq('usuario_id', userId);
 
-    if (errorPermisos) throw errorPermisos;
+    if (errorAsignaciones) throw errorAsignaciones;
 
-    // Combinar y formatear resultados
-    const workspaces = [
-      ...propias.map(w => ({ ...w, rol: 'admin', esCreador: true })),
-      ...permisos.map(p => ({ ...p.workspaces, rol: p.rol, esCreador: false })),
-    ];
+    // Formatear resultados
+    const workspaces = asignaciones.map(a => ({
+      ...a.workspaces,
+      rol: a.roles?.nombre || 'observador',
+      esCreador: a.workspaces?.creado_por === userId,
+    }));
 
-    // Eliminar duplicados (si soy creador y tengo permiso)
-    const unicos = workspaces.filter((w, index, self) =>
-      index === self.findIndex(t => t.id === w.id)
-    );
-
-    res.json(unicos);
+    res.json(workspaces);
   } catch (error) {
     console.error('Error obteniendo workspaces:', error);
     res.status(500).json({ error: 'Error al obtener workspaces' });
@@ -124,7 +117,9 @@ const crearWorkspace = async (req, res) => {
 
 /**
  * Asegura que el usuario existe en la tabla usuarios de Supabase.
- * Si no existe, lo crea automáticamente.
+ * Si no existe, lo crea automáticamente con rol observador por defecto.
+ * NOTA: El trigger on_auth_user_created debería crear el usuario automáticamente,
+ * pero esta función sirve como respaldo.
  */
 async function asegurarUsuarioExiste(userId, email, nombre) {
   // Verificar si el usuario ya existe
@@ -136,14 +131,21 @@ async function asegurarUsuarioExiste(userId, email, nombre) {
 
   if (existente) return; // Ya existe, no hacer nada
 
-  // Crear el usuario
+  // Obtener el rol observador (rol por defecto, nivel 4)
+  const { data: rolObservador } = await supabase
+    .from('roles')
+    .select('id')
+    .eq('nombre', 'observador')
+    .single();
+
+  // Crear el usuario con rol observador por defecto
   const { error } = await supabase
     .from('usuarios')
     .insert({
       id: userId,
       email: email || `user_${userId.substring(0, 8)}@local`,
       nombre: nombre || 'Usuario',
-      password_hash: '', // Supabase Auth maneja la contraseña
+      rol_id: rolObservador?.id || null,
     });
 
   if (error && error.code !== '23505') { // 23505 = duplicate key (ya existe)
@@ -224,45 +226,27 @@ const eliminarWorkspace = async (req, res) => {
 // ============================================
 
 async function verificarAcceso(workspaceId, userId) {
-  // Verificar si es creador
-  const { data: workspace } = await supabase
-    .from('workspaces')
-    .select('creado_por')
-    .eq('id', workspaceId)
-    .single();
-
-  if (workspace?.creado_por === userId) return true;
-
-  // Verificar si tiene permiso
-  const { data: permiso } = await supabase
-    .from('permisos_configuracion')
+  // Verificar si tiene asignación en usuario_workspaces
+  const { data: asignacion } = await supabase
+    .from('usuario_workspaces')
     .select('id')
     .eq('workspace_id', workspaceId)
     .eq('usuario_id', userId)
     .single();
 
-  return !!permiso;
+  return !!asignacion;
 }
 
 async function obtenerRolUsuario(workspaceId, userId) {
-  // Verificar si es creador
-  const { data: workspace } = await supabase
-    .from('workspaces')
-    .select('creado_por')
-    .eq('id', workspaceId)
-    .single();
-
-  if (workspace?.creado_por === userId) return 'admin';
-
-  // Obtener rol desde permisos
-  const { data: permiso } = await supabase
-    .from('permisos_configuracion')
-    .select('rol')
+  // Obtener rol desde usuario_workspaces con join a roles
+  const { data: asignacion } = await supabase
+    .from('usuario_workspaces')
+    .select('rol_id, roles (nombre)')
     .eq('workspace_id', workspaceId)
     .eq('usuario_id', userId)
     .single();
 
-  return permiso?.rol || null;
+  return asignacion?.roles?.nombre || null;
 }
 
 module.exports = {
