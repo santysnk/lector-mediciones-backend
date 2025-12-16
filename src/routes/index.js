@@ -18,6 +18,7 @@ const testConexionController = require('../controllers/testConexionController');
 const agentesController = require('../controllers/agentesController');
 const registradoresController = require('../controllers/registradoresController');
 const agenteApiController = require('../controllers/agenteApiController');
+const usuariosController = require('../controllers/usuariosController');
 
 // ============================================
 // Rutas de salud/status
@@ -25,6 +26,11 @@ const agenteApiController = require('../controllers/agenteApiController');
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// ============================================
+// Rutas de usuarios
+// ============================================
+router.get('/usuarios/perfil', verificarToken, usuariosController.obtenerPerfil);
 
 // ============================================
 // Rutas de workspaces
