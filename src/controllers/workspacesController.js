@@ -17,7 +17,7 @@ const obtenerWorkspaces = async (req, res) => {
       .select(`
         workspace_id,
         rol_id,
-        roles (nombre),
+        roles (codigo),
         workspaces (*)
       `)
       .eq('usuario_id', userId);
@@ -27,7 +27,7 @@ const obtenerWorkspaces = async (req, res) => {
     // Formatear resultados
     const workspaces = asignaciones.map(a => ({
       ...a.workspaces,
-      rol: a.roles?.nombre || 'observador',
+      rol: a.roles?.codigo || 'observador',
       esCreador: a.workspaces?.creado_por === userId,
     }));
 
@@ -122,7 +122,7 @@ const crearWorkspace = async (req, res) => {
     const { data: rolAdmin } = await supabase
       .from('roles')
       .select('id')
-      .eq('nombre', 'admin')
+      .eq('codigo', 'admin')
       .single();
 
     // Asignar automáticamente al creador como admin del workspace
@@ -172,7 +172,7 @@ async function asegurarUsuarioExiste(userId, email, nombre) {
   const { data: rolObservador } = await supabase
     .from('roles')
     .select('id')
-    .eq('nombre', 'observador')
+    .eq('codigo', 'observador')
     .single();
 
   // Crear el usuario con rol observador por defecto
@@ -278,12 +278,12 @@ async function obtenerRolUsuario(workspaceId, userId) {
   // Obtener rol desde usuario_workspaces con join a roles
   const { data: asignacion } = await supabase
     .from('usuario_workspaces')
-    .select('rol_id, roles (nombre)')
+    .select('rol_id, roles (codigo)')
     .eq('workspace_id', workspaceId)
     .eq('usuario_id', userId)
     .single();
 
-  return asignacion?.roles?.nombre || null;
+  return asignacion?.roles?.codigo || null;
 }
 
 /**
@@ -292,11 +292,11 @@ async function obtenerRolUsuario(workspaceId, userId) {
 async function obtenerRolGlobalUsuario(userId) {
   const { data: usuario } = await supabase
     .from('usuarios')
-    .select('rol_id, roles (nombre)')
+    .select('rol_id, roles (codigo)')
     .eq('id', userId)
     .single();
 
-  return usuario?.roles?.nombre || 'observador';
+  return usuario?.roles?.codigo || 'observador';
 }
 
 module.exports = {

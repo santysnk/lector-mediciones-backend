@@ -23,6 +23,7 @@ const obtenerPerfil = async (req, res) => {
         rol_id,
         roles (
           id,
+          codigo,
           nombre,
           nivel,
           descripcion
@@ -36,8 +37,8 @@ const obtenerPerfil = async (req, res) => {
       // Usuario no existe en tabla usuarios, crearlo con rol observador
       const { data: rolObservador } = await supabase
         .from('roles')
-        .select('id, nombre, nivel, descripcion')
-        .eq('nombre', 'observador')
+        .select('id, codigo, nombre, nivel, descripcion')
+        .eq('codigo', 'observador')
         .single();
 
       const { data: nuevoUsuario, error: errorCrear } = await supabase
@@ -56,6 +57,7 @@ const obtenerPerfil = async (req, res) => {
           rol_id,
           roles (
             id,
+            codigo,
             nombre,
             nivel,
             descripcion
@@ -68,7 +70,7 @@ const obtenerPerfil = async (req, res) => {
 
       return res.json({
         ...nuevoUsuario,
-        rolGlobal: rolObservador?.nombre || 'observador',
+        rolGlobal: rolObservador?.codigo || 'observador',
         nivelRol: rolObservador?.nivel || 4,
         puedeCrearWorkspaces: false,
       });
@@ -76,14 +78,14 @@ const obtenerPerfil = async (req, res) => {
 
     if (error) throw error;
 
-    // Determinar permisos basados en el rol global
-    const rolNombre = usuario.roles?.nombre || 'observador';
+    // Determinar permisos basados en el rol global (usar codigo, no nombre)
+    const rolCodigo = usuario.roles?.codigo || 'observador';
     const nivelRol = usuario.roles?.nivel || 4;
-    const puedeCrearWorkspaces = ['superadmin', 'admin'].includes(rolNombre);
+    const puedeCrearWorkspaces = ['superadmin', 'admin'].includes(rolCodigo);
 
     res.json({
       ...usuario,
-      rolGlobal: rolNombre,
+      rolGlobal: rolCodigo,
       nivelRol,
       puedeCrearWorkspaces,
     });
