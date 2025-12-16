@@ -81,6 +81,7 @@ const obtenerWorkspace = async (req, res) => {
 
 /**
  * Crear un nuevo workspace
+ * Solo superadmin y admin pueden crear workspaces
  */
 const crearWorkspace = async (req, res) => {
   const { nombre, descripcion } = req.body;
@@ -96,7 +97,16 @@ const crearWorkspace = async (req, res) => {
     // Asegurar que el usuario existe en la tabla usuarios
     await asegurarUsuarioExiste(userId, userEmail, userName);
 
-    const { data, error } = await supabase
+    // Verificar que el usuario tiene permiso para crear workspaces (superadmin o admin)
+    const rolGlobal = await obtenerRolGlobalUsuario(userId);
+    if (!['superadmin', 'admin'].includes(rolGlobal)) {
+      return res.status(403).json({
+        error: 'No tienes permiso para crear workspaces. Solo superadmin y admin pueden hacerlo.'
+      });
+    }
+
+    // Crear el workspace
+    const { data: workspace, error: errorWorkspace } = await supabase
       .from('workspaces')
       .insert({
         nombre: nombre.trim(),
@@ -106,9 +116,36 @@ const crearWorkspace = async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (errorWorkspace) throw errorWorkspace;
 
-    res.status(201).json(data);
+    // Obtener el rol admin para asignar al creador
+    const { data: rolAdmin } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('nombre', 'admin')
+      .single();
+
+    // Asignar automáticamente al creador como admin del workspace
+    const { error: errorAsignacion } = await supabase
+      .from('usuario_workspaces')
+      .insert({
+        usuario_id: userId,
+        workspace_id: workspace.id,
+        rol_id: rolAdmin?.id,
+      });
+
+    if (errorAsignacion) {
+      // Si falla la asignación, eliminar el workspace creado
+      await supabase.from('workspaces').delete().eq('id', workspace.id);
+      throw errorAsignacion;
+    }
+
+    // Devolver el workspace con el rol incluido
+    res.status(201).json({
+      ...workspace,
+      rol: 'admin',
+      esCreador: true,
+    });
   } catch (error) {
     console.error('Error creando workspace:', error);
     res.status(500).json({ error: 'Error al crear workspace' });
@@ -247,6 +284,19 @@ async function obtenerRolUsuario(workspaceId, userId) {
     .single();
 
   return asignacion?.roles?.nombre || null;
+}
+
+/**
+ * Obtiene el rol global del usuario (desde la tabla usuarios)
+ */
+async function obtenerRolGlobalUsuario(userId) {
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('rol_id, roles (nombre)')
+    .eq('id', userId)
+    .single();
+
+  return usuario?.roles?.nombre || 'observador';
 }
 
 module.exports = {
