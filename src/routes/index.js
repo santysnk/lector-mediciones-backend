@@ -19,6 +19,7 @@ const agentesController = require('../controllers/agentesController');
 const registradoresController = require('../controllers/registradoresController');
 const agenteApiController = require('../controllers/agenteApiController');
 const usuariosController = require('../controllers/usuariosController');
+const adminAgentesController = require('../controllers/adminAgentesController');
 
 // ============================================
 // Rutas de salud/status
@@ -90,12 +91,33 @@ router.post('/test-conexion', verificarToken, testConexionController.testConexio
 router.get('/test-conexion/estado', verificarToken, testConexionController.obtenerEstado);
 
 // ============================================
-// Rutas de agentes
+// Rutas de agentes (legacy - mantener por compatibilidad)
 // ============================================
 router.post('/agentes/solicitar-vinculacion', verificarToken, agentesController.solicitarVinculacion);
 router.get('/agentes/estado', verificarToken, agentesController.obtenerEstadoVinculacion);
 router.post('/agentes/desvincular', verificarToken, agentesController.desvincularAgente);
 router.post('/agentes/rotar-clave', verificarToken, agentesController.rotarClave);
+
+// ============================================
+// Rutas de agentes (nueva arquitectura N:M)
+// ============================================
+// Panel Admin - CRUD de agentes (solo superadmin)
+router.get('/admin/agentes', verificarToken, adminAgentesController.listarAgentes);
+router.post('/admin/agentes', verificarToken, adminAgentesController.crearAgente);
+router.put('/admin/agentes/:id', verificarToken, adminAgentesController.actualizarAgente);
+router.delete('/admin/agentes/:id', verificarToken, adminAgentesController.eliminarAgente);
+router.post('/admin/agentes/:id/rotar-clave', verificarToken, adminAgentesController.rotarClaveAgente);
+
+// Agentes disponibles para vincular (admin+)
+router.get('/agentes/disponibles', verificarToken, adminAgentesController.listarAgentesDisponibles);
+
+// Vinculación workspace-agente (N:M)
+router.get('/workspaces/:workspaceId/agentes', verificarToken, adminAgentesController.listarAgentesWorkspace);
+router.post('/workspaces/:workspaceId/agentes', verificarToken, adminAgentesController.vincularAgenteWorkspace);
+router.delete('/workspaces/:workspaceId/agentes/:agenteId', verificarToken, adminAgentesController.desvincularAgenteWorkspace);
+
+// Registradores de un agente específico
+router.get('/agentes/:agenteId/registradores', verificarToken, adminAgentesController.listarRegistradoresAgente);
 
 // ============================================
 // Rutas de registradores
