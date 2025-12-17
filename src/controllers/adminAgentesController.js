@@ -523,7 +523,7 @@ async function desvincularAgenteWorkspace(req, res) {
 }
 
 // ============================================
-// Registradores de un Agente
+// Registradores de un Agente (Solo Superadmin)
 // ============================================
 
 /**
@@ -583,6 +583,217 @@ async function listarRegistradoresAgente(req, res) {
   }
 }
 
+/**
+ * POST /api/agentes/:agenteId/registradores
+ * Crea un registrador para un agente (solo superadmin)
+ */
+async function crearRegistradorAgente(req, res) {
+  try {
+    const userId = req.user.id;
+    const { agenteId } = req.params;
+    const { nombre, tipo, ip, puerto, unitId, indiceInicial, cantidadRegistros, intervaloSegundos, alimentadorId } = req.body;
+
+    if (!await esSuperadmin(userId)) {
+      return res.status(403).json({ error: 'Solo superadmin puede crear registradores' });
+    }
+
+    // Validaciones
+    if (!nombre || !ip || !puerto || indiceInicial === undefined || !cantidadRegistros) {
+      return res.status(400).json({ error: 'Faltan campos requeridos: nombre, ip, puerto, indiceInicial, cantidadRegistros' });
+    }
+
+    // Verificar que el agente existe
+    const { data: agente, error: errorAgente } = await supabase
+      .from('agentes')
+      .select('id, nombre')
+      .eq('id', agenteId)
+      .single();
+
+    if (errorAgente || !agente) {
+      return res.status(404).json({ error: 'Agente no encontrado' });
+    }
+
+    // Crear registrador
+    const { data: registrador, error: errorCrear } = await supabase
+      .from('registradores')
+      .insert({
+        agente_id: agenteId,
+        nombre,
+        tipo: tipo || 'modbus',
+        ip,
+        puerto: parseInt(puerto),
+        unit_id: parseInt(unitId) || 1,
+        indice_inicial: parseInt(indiceInicial),
+        cantidad_registros: parseInt(cantidadRegistros),
+        intervalo_segundos: parseInt(intervaloSegundos) || 60,
+        alimentador_id: alimentadorId || null,
+        activo: true,
+      })
+      .select()
+      .single();
+
+    if (errorCrear) {
+      console.error('Error creando registrador:', errorCrear);
+      return res.status(500).json({ error: 'Error creando registrador', detalle: errorCrear.message });
+    }
+
+    res.status(201).json(registrador);
+  } catch (err) {
+    console.error('Error en crearRegistradorAgente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+/**
+ * PUT /api/agentes/:agenteId/registradores/:registradorId
+ * Actualiza un registrador (solo superadmin)
+ */
+async function actualizarRegistradorAgente(req, res) {
+  try {
+    const userId = req.user.id;
+    const { agenteId, registradorId } = req.params;
+    const { nombre, tipo, ip, puerto, unitId, indiceInicial, cantidadRegistros, intervaloSegundos, activo, alimentadorId } = req.body;
+
+    if (!await esSuperadmin(userId)) {
+      return res.status(403).json({ error: 'Solo superadmin puede editar registradores' });
+    }
+
+    // Verificar que el registrador pertenece al agente
+    const { data: regExistente, error: errorVerificar } = await supabase
+      .from('registradores')
+      .select('id')
+      .eq('id', registradorId)
+      .eq('agente_id', agenteId)
+      .single();
+
+    if (errorVerificar || !regExistente) {
+      return res.status(404).json({ error: 'Registrador no encontrado para este agente' });
+    }
+
+    // Construir objeto de actualización
+    const updateData = { updated_at: new Date().toISOString() };
+    if (nombre !== undefined) updateData.nombre = nombre;
+    if (tipo !== undefined) updateData.tipo = tipo;
+    if (ip !== undefined) updateData.ip = ip;
+    if (puerto !== undefined) updateData.puerto = parseInt(puerto);
+    if (unitId !== undefined) updateData.unit_id = parseInt(unitId);
+    if (indiceInicial !== undefined) updateData.indice_inicial = parseInt(indiceInicial);
+    if (cantidadRegistros !== undefined) updateData.cantidad_registros = parseInt(cantidadRegistros);
+    if (intervaloSegundos !== undefined) updateData.intervalo_segundos = parseInt(intervaloSegundos);
+    if (activo !== undefined) updateData.activo = activo;
+    if (alimentadorId !== undefined) updateData.alimentador_id = alimentadorId || null;
+
+    const { data: registrador, error: errorActualizar } = await supabase
+      .from('registradores')
+      .update(updateData)
+      .eq('id', registradorId)
+      .select()
+      .single();
+
+    if (errorActualizar) {
+      console.error('Error actualizando registrador:', errorActualizar);
+      return res.status(500).json({ error: 'Error actualizando registrador' });
+    }
+
+    res.json(registrador);
+  } catch (err) {
+    console.error('Error en actualizarRegistradorAgente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+/**
+ * DELETE /api/agentes/:agenteId/registradores/:registradorId
+ * Elimina un registrador (solo superadmin)
+ */
+async function eliminarRegistradorAgente(req, res) {
+  try {
+    const userId = req.user.id;
+    const { agenteId, registradorId } = req.params;
+
+    if (!await esSuperadmin(userId)) {
+      return res.status(403).json({ error: 'Solo superadmin puede eliminar registradores' });
+    }
+
+    // Verificar que el registrador pertenece al agente
+    const { data: regExistente, error: errorVerificar } = await supabase
+      .from('registradores')
+      .select('id, nombre')
+      .eq('id', registradorId)
+      .eq('agente_id', agenteId)
+      .single();
+
+    if (errorVerificar || !regExistente) {
+      return res.status(404).json({ error: 'Registrador no encontrado para este agente' });
+    }
+
+    // Eliminar registrador (las lecturas se eliminan por CASCADE si está configurado)
+    const { error: errorEliminar } = await supabase
+      .from('registradores')
+      .delete()
+      .eq('id', registradorId);
+
+    if (errorEliminar) {
+      console.error('Error eliminando registrador:', errorEliminar);
+      return res.status(500).json({ error: 'Error eliminando registrador' });
+    }
+
+    res.json({ mensaje: `Registrador "${regExistente.nombre}" eliminado correctamente` });
+  } catch (err) {
+    console.error('Error en eliminarRegistradorAgente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+/**
+ * POST /api/agentes/:agenteId/registradores/:registradorId/toggle
+ * Activa/desactiva un registrador (solo superadmin)
+ */
+async function toggleRegistradorAgente(req, res) {
+  try {
+    const userId = req.user.id;
+    const { agenteId, registradorId } = req.params;
+
+    if (!await esSuperadmin(userId)) {
+      return res.status(403).json({ error: 'Solo superadmin puede cambiar estado de registradores' });
+    }
+
+    // Obtener estado actual
+    const { data: regExistente, error: errorVerificar } = await supabase
+      .from('registradores')
+      .select('id, activo, nombre')
+      .eq('id', registradorId)
+      .eq('agente_id', agenteId)
+      .single();
+
+    if (errorVerificar || !regExistente) {
+      return res.status(404).json({ error: 'Registrador no encontrado para este agente' });
+    }
+
+    // Toggle estado
+    const nuevoEstado = !regExistente.activo;
+    const { data: registrador, error: errorActualizar } = await supabase
+      .from('registradores')
+      .update({ activo: nuevoEstado, updated_at: new Date().toISOString() })
+      .eq('id', registradorId)
+      .select()
+      .single();
+
+    if (errorActualizar) {
+      console.error('Error actualizando estado:', errorActualizar);
+      return res.status(500).json({ error: 'Error actualizando estado' });
+    }
+
+    res.json({
+      registrador,
+      mensaje: nuevoEstado ? 'Registrador activado' : 'Registrador desactivado',
+    });
+  } catch (err) {
+    console.error('Error en toggleRegistradorAgente:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
 module.exports = {
   // Admin CRUD
   listarAgentes,
@@ -601,4 +812,8 @@ module.exports = {
 
   // Registradores
   listarRegistradoresAgente,
+  crearRegistradorAgente,
+  actualizarRegistradorAgente,
+  eliminarRegistradorAgente,
+  toggleRegistradorAgente,
 };

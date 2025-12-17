@@ -116,8 +116,12 @@ router.get('/workspaces/:workspaceId/agentes', verificarToken, adminAgentesContr
 router.post('/workspaces/:workspaceId/agentes', verificarToken, adminAgentesController.vincularAgenteWorkspace);
 router.delete('/workspaces/:workspaceId/agentes/:agenteId', verificarToken, adminAgentesController.desvincularAgenteWorkspace);
 
-// Registradores de un agente específico
+// Registradores de un agente específico (CRUD - solo superadmin)
 router.get('/agentes/:agenteId/registradores', verificarToken, adminAgentesController.listarRegistradoresAgente);
+router.post('/agentes/:agenteId/registradores', verificarToken, adminAgentesController.crearRegistradorAgente);
+router.put('/agentes/:agenteId/registradores/:registradorId', verificarToken, adminAgentesController.actualizarRegistradorAgente);
+router.delete('/agentes/:agenteId/registradores/:registradorId', verificarToken, adminAgentesController.eliminarRegistradorAgente);
+router.post('/agentes/:agenteId/registradores/:registradorId/toggle', verificarToken, adminAgentesController.toggleRegistradorAgente);
 
 // ============================================
 // Rutas de registradores
