@@ -20,6 +20,7 @@ const registradoresController = require('../controllers/registradoresController'
 const agenteApiController = require('../controllers/agenteApiController');
 const usuariosController = require('../controllers/usuariosController');
 const adminAgentesController = require('../controllers/adminAgentesController');
+const testRegistradorController = require('../controllers/testRegistradorController');
 
 // ============================================
 // Rutas de salud/status
@@ -123,6 +124,10 @@ router.put('/agentes/:agenteId/registradores/:registradorId', verificarToken, ad
 router.delete('/agentes/:agenteId/registradores/:registradorId', verificarToken, adminAgentesController.eliminarRegistradorAgente);
 router.post('/agentes/:agenteId/registradores/:registradorId/toggle', verificarToken, adminAgentesController.toggleRegistradorAgente);
 
+// Test de conexión de registrador (superadmin solicita, agente ejecuta)
+router.post('/agentes/:agenteId/test-registrador', verificarToken, testRegistradorController.solicitarTest);
+router.get('/agentes/:agenteId/test-registrador/:testId', verificarToken, testRegistradorController.consultarTest);
+
 // ============================================
 // Rutas de registradores
 // ============================================
@@ -145,5 +150,9 @@ router.get('/agente/config', verificarTokenAgente, agenteApiController.obtenerCo
 router.post('/agente/lecturas', verificarTokenAgente, agenteApiController.enviarLecturas);
 router.post('/agente/log', verificarTokenAgente, agenteApiController.enviarLog);
 router.post('/agente/vincular', verificarTokenAgente, agenteApiController.vincular);
+
+// Tests de registrador (el agente consulta y reporta)
+router.get('/agente/tests-pendientes', verificarTokenAgente, testRegistradorController.obtenerTestsPendientes);
+router.post('/agente/tests/:testId/resultado', verificarTokenAgente, testRegistradorController.reportarResultadoTest);
 
 module.exports = router;
