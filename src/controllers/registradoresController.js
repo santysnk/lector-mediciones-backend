@@ -9,6 +9,43 @@ const supabase = createClient(
 );
 
 /**
+ * Verifica si el usuario tiene permisos sobre el workspace
+ * @param {string} usuarioId - ID del usuario
+ * @param {string} workspaceId - ID del workspace
+ * @param {string[]} rolesPermitidos - Array de roles permitidos (opcional, si no se pasa permite cualquier rol)
+ * @returns {object} - { tienePermiso: boolean, rol: string|null }
+ */
+async function verificarPermisoWorkspace(usuarioId, workspaceId, rolesPermitidos = null) {
+  // Primero verificar en usuario_workspaces
+  const { data: permiso } = await supabase
+    .from('usuario_workspaces')
+    .select('rol_id, roles (codigo)')
+    .eq('workspace_id', workspaceId)
+    .eq('usuario_id', usuarioId)
+    .single();
+
+  if (permiso) {
+    const rolCodigo = permiso.roles?.codigo;
+    if (!rolesPermitidos || rolesPermitidos.includes(rolCodigo)) {
+      return { tienePermiso: true, rol: rolCodigo };
+    }
+  }
+
+  // Si no tiene permiso en workspace, verificar si es superadmin global
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('rol_id, roles (codigo)')
+    .eq('id', usuarioId)
+    .single();
+
+  if (usuario?.roles?.codigo === 'superadmin') {
+    return { tienePermiso: true, rol: 'superadmin' };
+  }
+
+  return { tienePermiso: false, rol: null };
+}
+
+/**
  * Sanitiza el nombre para usarlo como nombre de tabla
  * Convierte espacios a guiones bajos, elimina caracteres especiales
  */
@@ -35,15 +72,10 @@ async function obtenerRegistradores(req, res) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
-    // Verificar permisos
-    const { data: permiso, error: errorPermiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
-      .eq('workspace_id', workspaceId)
-      .eq('usuario_id', usuarioId)
-      .single();
+    // Verificar permisos (cualquier rol con acceso al workspace)
+    const { tienePermiso } = await verificarPermisoWorkspace(usuarioId, workspaceId);
 
-    if (errorPermiso || !permiso) {
+    if (!tienePermiso) {
       return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
     }
 
@@ -96,15 +128,10 @@ async function crearRegistrador(req, res) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
-    // Verificar permisos (solo admin)
-    const { data: permiso, error: errorPermiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
-      .eq('workspace_id', workspaceId)
-      .eq('usuario_id', usuarioId)
-      .single();
+    // Verificar permisos (solo superadmin y admin)
+    const { tienePermiso } = await verificarPermisoWorkspace(usuarioId, workspaceId, ['superadmin', 'admin']);
 
-    if (errorPermiso || !permiso || permiso.rol !== 'admin') {
+    if (!tienePermiso) {
       return res.status(403).json({ error: 'Solo administradores pueden crear registradores' });
     }
 
@@ -225,15 +252,10 @@ async function actualizarRegistrador(req, res) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
-    // Verificar permisos (solo admin)
-    const { data: permiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
-      .eq('workspace_id', workspaceId)
-      .eq('usuario_id', usuarioId)
-      .single();
+    // Verificar permisos (solo superadmin y admin)
+    const { tienePermiso } = await verificarPermisoWorkspace(usuarioId, workspaceId, ['superadmin', 'admin']);
 
-    if (!permiso || permiso.rol !== 'admin') {
+    if (!tienePermiso) {
       return res.status(403).json({ error: 'Solo administradores pueden editar registradores' });
     }
 
@@ -280,15 +302,10 @@ async function eliminarRegistrador(req, res) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
-    // Verificar permisos (solo admin)
-    const { data: permiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
-      .eq('workspace_id', workspaceId)
-      .eq('usuario_id', usuarioId)
-      .single();
+    // Verificar permisos (solo superadmin y admin)
+    const { tienePermiso } = await verificarPermisoWorkspace(usuarioId, workspaceId, ['superadmin', 'admin']);
 
-    if (!permiso || permiso.rol !== 'admin') {
+    if (!tienePermiso) {
       return res.status(403).json({ error: 'Solo administradores pueden eliminar registradores' });
     }
 
@@ -342,15 +359,10 @@ async function toggleActivo(req, res) {
       return res.status(400).json({ error: 'workspaceId y activo son requeridos' });
     }
 
-    // Verificar permisos
-    const { data: permiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
-      .eq('workspace_id', workspaceId)
-      .eq('usuario_id', usuarioId)
-      .single();
+    // Verificar permisos (cualquier rol con acceso al workspace puede toggle)
+    const { tienePermiso } = await verificarPermisoWorkspace(usuarioId, workspaceId);
 
-    if (!permiso) {
+    if (!tienePermiso) {
       return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
     }
 

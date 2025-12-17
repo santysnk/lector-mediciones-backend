@@ -123,20 +123,31 @@ async function solicitarVinculacion(req, res) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
-    // Verificar que el usuario tiene permisos sobre el workspace
+    // Verificar que el usuario tiene permisos sobre el workspace (usando nueva tabla usuario_workspaces)
     const { data: permiso, error: errorPermiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
+      .from('usuario_workspaces')
+      .select('rol_id, roles (codigo, nivel)')
       .eq('workspace_id', workspaceId)
       .eq('usuario_id', usuarioId)
       .single();
 
     if (errorPermiso || !permiso) {
-      return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
-    }
+      // También verificar si es superadmin (tiene acceso global)
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('rol_id, roles (codigo)')
+        .eq('id', usuarioId)
+        .single();
 
-    if (!['admin', 'editor'].includes(permiso.rol)) {
-      return res.status(403).json({ error: 'Necesitas rol admin o editor para vincular agentes' });
+      if (!usuario || usuario.roles?.codigo !== 'superadmin') {
+        return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
+      }
+    } else {
+      const rolCodigo = permiso.roles?.codigo;
+      // Solo superadmin y admin pueden vincular agentes
+      if (!['superadmin', 'admin'].includes(rolCodigo)) {
+        return res.status(403).json({ error: 'Necesitas rol admin o superior para vincular agentes' });
+      }
     }
 
     // Verificar que el workspace existe
@@ -296,20 +307,31 @@ async function obtenerEstadoVinculacion(req, res) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
-    // Verificar permisos
+    // Verificar permisos (usando nueva tabla usuario_workspaces)
     console.log('[obtenerEstadoVinculacion] Verificando permisos...');
     const { data: permiso, error: errorPermiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
+      .from('usuario_workspaces')
+      .select('rol_id, roles (codigo, nivel)')
       .eq('workspace_id', workspaceId)
       .eq('usuario_id', usuarioId)
       .single();
 
     if (errorPermiso || !permiso) {
-      console.log('[obtenerEstadoVinculacion] Error permiso:', errorPermiso);
-      return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
+      // También verificar si es superadmin (tiene acceso global)
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('rol_id, roles (codigo)')
+        .eq('id', usuarioId)
+        .single();
+
+      if (!usuario || usuario.roles?.codigo !== 'superadmin') {
+        console.log('[obtenerEstadoVinculacion] Error permiso:', errorPermiso);
+        return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
+      }
+      console.log('[obtenerEstadoVinculacion] Permiso OK: superadmin global');
+    } else {
+      console.log('[obtenerEstadoVinculacion] Permiso OK:', permiso.roles?.codigo);
     }
-    console.log('[obtenerEstadoVinculacion] Permiso OK:', permiso.rol);
 
     // Obtener workspace (sin join por ahora)
     console.log('[obtenerEstadoVinculacion] Obteniendo workspace...');
@@ -412,15 +434,28 @@ async function desvincularAgente(req, res) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
-    // Verificar permisos (solo admin)
+    // Verificar permisos (solo admin o superadmin)
     const { data: permiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
+      .from('usuario_workspaces')
+      .select('rol_id, roles (codigo)')
       .eq('workspace_id', workspaceId)
       .eq('usuario_id', usuarioId)
       .single();
 
-    if (!permiso || permiso.rol !== 'admin') {
+    let tienePermiso = permiso && ['superadmin', 'admin'].includes(permiso.roles?.codigo);
+
+    // Si no tiene permiso en workspace, verificar si es superadmin global
+    if (!tienePermiso) {
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('rol_id, roles (codigo)')
+        .eq('id', usuarioId)
+        .single();
+
+      tienePermiso = usuario?.roles?.codigo === 'superadmin';
+    }
+
+    if (!tienePermiso) {
       return res.status(403).json({ error: 'Solo administradores pueden desvincular agentes' });
     }
 
@@ -456,15 +491,28 @@ async function rotarClave(req, res) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
-    // Verificar permisos (solo admin)
+    // Verificar permisos (solo admin o superadmin)
     const { data: permiso } = await supabase
-      .from('permisos_configuracion')
-      .select('rol')
+      .from('usuario_workspaces')
+      .select('rol_id, roles (codigo)')
       .eq('workspace_id', workspaceId)
       .eq('usuario_id', usuarioId)
       .single();
 
-    if (!permiso || permiso.rol !== 'admin') {
+    let tienePermiso = permiso && ['superadmin', 'admin'].includes(permiso.roles?.codigo);
+
+    // Si no tiene permiso en workspace, verificar si es superadmin global
+    if (!tienePermiso) {
+      const { data: usuario } = await supabase
+        .from('usuarios')
+        .select('rol_id, roles (codigo)')
+        .eq('id', usuarioId)
+        .single();
+
+      tienePermiso = usuario?.roles?.codigo === 'superadmin';
+    }
+
+    if (!tienePermiso) {
       return res.status(403).json({ error: 'Solo administradores pueden rotar claves' });
     }
 
