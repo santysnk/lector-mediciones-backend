@@ -627,7 +627,7 @@ async function crearRegistradorAgente(req, res) {
         cantidad_registros: parseInt(cantidadRegistros),
         intervalo_segundos: parseInt(intervaloSegundos) || 60,
         alimentador_id: alimentadorId || null,
-        activo: true,
+        activo: false,
       })
       .select()
       .single();
