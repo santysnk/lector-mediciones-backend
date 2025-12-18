@@ -30,7 +30,7 @@ const obtenerAlimentadores = async (req, res) => {
  */
 const crearAlimentador = async (req, res) => {
   const { puestoId } = req.params;
-  const { nombre, color, orden, config_rele, config_analizador } = req.body;
+  const { nombre, color, orden, registrador_id, intervalo_consulta_ms, card_design, gap_horizontal } = req.body;
 
   if (!nombre || nombre.trim() === '') {
     return res.status(400).json({ error: 'El nombre es requerido' });
@@ -58,8 +58,10 @@ const crearAlimentador = async (req, res) => {
         nombre: nombre.trim(),
         color: color || '#3b82f6',
         orden: nuevoOrden,
-        config_rele: config_rele || {},
-        config_analizador: config_analizador || {},
+        registrador_id: registrador_id || null,
+        intervalo_consulta_ms: intervalo_consulta_ms || 5000,
+        card_design: card_design || {},
+        gap_horizontal: gap_horizontal || 0,
       })
       .select()
       .single();
@@ -78,16 +80,16 @@ const crearAlimentador = async (req, res) => {
  */
 const actualizarAlimentador = async (req, res) => {
   const { id } = req.params;
-  const { nombre, color, orden, config_rele, config_analizador, gap_horizontal } = req.body;
+  const { nombre, color, orden, registrador_id, intervalo_consulta_ms, card_design, gap_horizontal } = req.body;
 
   try {
     const updates = {};
     if (nombre !== undefined) updates.nombre = nombre.trim();
     if (color !== undefined) updates.color = color;
     if (orden !== undefined) updates.orden = orden;
-    if (config_rele !== undefined) updates.config_rele = config_rele;
-    if (config_analizador !== undefined) updates.config_analizador = config_analizador;
-    // Nuevo campo para gap horizontal
+    if (registrador_id !== undefined) updates.registrador_id = registrador_id;
+    if (intervalo_consulta_ms !== undefined) updates.intervalo_consulta_ms = intervalo_consulta_ms;
+    if (card_design !== undefined) updates.card_design = card_design;
     if (gap_horizontal !== undefined) updates.gap_horizontal = gap_horizontal;
 
     const { data, error } = await supabase
