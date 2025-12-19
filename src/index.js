@@ -24,19 +24,31 @@ const origensPermitidos = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
+  'http://localhost:4173', // Vite preview
 ];
 
 // Agregar frontend en producción si está configurado
 if (process.env.FRONTEND_URL) {
-  origensPermitidos.push(process.env.FRONTEND_URL);
+  // Soportar múltiples URLs separadas por coma
+  const urls = process.env.FRONTEND_URL.split(',').map(url => url.trim());
+  origensPermitidos.push(...urls);
 }
 
+// En producción (Render), permitir cualquier origen en desarrollo
+// Esto se puede configurar con CORS_ALLOW_ALL=true en variables de entorno
+if (process.env.CORS_ALLOW_ALL === 'true') {
+  console.log('[CORS] Modo permisivo activado - aceptando todos los orígenes');
+}
+
+// Configuración de CORS para Socket.IO
+const corsConfigSocketIO = {
+  origin: process.env.CORS_ALLOW_ALL === 'true' ? true : origensPermitidos,
+  methods: ['GET', 'POST'],
+  credentials: true,
+};
+
 const io = new Server(server, {
-  cors: {
-    origin: origensPermitidos,
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
+  cors: corsConfigSocketIO,
 });
 
 // Estado de agentes conectados
@@ -211,9 +223,12 @@ module.exports.procesarRespuestaTest = (requestId, resultado) => {
 
 // CORS - permitir requests desde el frontend
 app.use(cors({
-  origin: origensPermitidos,
+  origin: process.env.CORS_ALLOW_ALL === 'true' ? true : origensPermitidos,
   credentials: true,
 }));
+
+// Log de orígenes permitidos al iniciar
+console.log('[CORS] Orígenes permitidos:', process.env.CORS_ALLOW_ALL === 'true' ? 'TODOS' : origensPermitidos);
 
 // Parsear JSON
 app.use(express.json());

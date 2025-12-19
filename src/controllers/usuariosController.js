@@ -4,6 +4,83 @@
 const supabase = require('../config/supabase');
 
 /**
+ * Crear perfil de usuario después del registro en Supabase Auth
+ * Se llama desde el frontend después de signUp exitoso
+ */
+const crearPerfil = async (req, res) => {
+  const userId = req.user.id;
+  const userEmail = req.user.email;
+  const { nombre } = req.body;
+
+  try {
+    // Verificar si ya existe el usuario
+    const { data: existente } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (existente) {
+      return res.status(409).json({ error: 'El perfil ya existe' });
+    }
+
+    // Obtener rol observador por defecto
+    const { data: rolObservador, error: errorRol } = await supabase
+      .from('roles')
+      .select('id, codigo')
+      .eq('codigo', 'observador')
+      .single();
+
+    if (errorRol) {
+      console.error('Error obteniendo rol observador:', errorRol);
+    }
+
+    // Crear el perfil del usuario
+    const { data: nuevoUsuario, error: errorCrear } = await supabase
+      .from('usuarios')
+      .insert({
+        id: userId,
+        email: userEmail,
+        nombre: nombre || userEmail.split('@')[0],
+        rol_id: rolObservador?.id || null,
+        activo: true,
+      })
+      .select(`
+        id,
+        email,
+        nombre,
+        activo,
+        rol_id,
+        roles (
+          id,
+          codigo,
+          nombre,
+          nivel
+        ),
+        created_at
+      `)
+      .single();
+
+    if (errorCrear) {
+      console.error('Error creando perfil:', errorCrear);
+      return res.status(500).json({ error: 'Error al crear perfil de usuario' });
+    }
+
+    console.log(`[Usuarios] Perfil creado para: ${userEmail}`);
+
+    res.status(201).json({
+      ...nuevoUsuario,
+      rolGlobal: nuevoUsuario.roles?.codigo || 'observador',
+      nivelRol: nuevoUsuario.roles?.nivel || 4,
+      puedeCrearWorkspaces: false,
+    });
+  } catch (error) {
+    console.error('Error en crearPerfil:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
+
+/**
  * Obtener perfil del usuario autenticado
  * Incluye rol global y permisos
  */
@@ -96,5 +173,6 @@ const obtenerPerfil = async (req, res) => {
 };
 
 module.exports = {
+  crearPerfil,
   obtenerPerfil,
 };

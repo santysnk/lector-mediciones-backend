@@ -33,6 +33,7 @@ router.get('/health', (req, res) => {
 // Rutas de usuarios
 // ============================================
 router.get('/usuarios/perfil', verificarToken, usuariosController.obtenerPerfil);
+router.post('/usuarios/perfil', verificarToken, usuariosController.crearPerfil);
 
 // ============================================
 // Rutas de workspaces
