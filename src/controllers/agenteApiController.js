@@ -234,12 +234,11 @@ async function enviarLecturas(req, res) {
     }
 
     // Validar que los registradores pertenecen a este agente
-    // Y obtener indice_inicial y cantidad_registros para cada uno
     const registradorIds = [...new Set(lecturas.map(l => l.registradorId))];
 
     const { data: registradoresValidos, error: errorReg } = await supabase
       .from('registradores')
-      .select('id, indice_inicial, cantidad_registros')
+      .select('id')
       .eq('agente_id', agenteId)
       .in('id', registradorIds);
 
@@ -248,33 +247,20 @@ async function enviarLecturas(req, res) {
       return res.status(500).json({ error: 'Error validando registradores' });
     }
 
-    // Crear mapa de registradores para acceso rápido a indice_inicial y cantidad_registros
-    const registradoresMap = new Map(
-      registradoresValidos.map(r => [r.id, {
-        indice_inicial: r.indice_inicial,
-        cantidad_registros: r.cantidad_registros
-      }])
-    );
     const idsValidos = new Set(registradoresValidos.map(r => r.id));
 
     // Filtrar lecturas válidas y formatear para inserción
-    // Incluir indice_inicial y cantidad_registros del registrador
+    // Nota: No guardamos indice_inicial en la lectura - se obtiene del registrador al consultar
     const lecturasValidas = lecturas
       .filter(l => idsValidos.has(l.registradorId))
-      .map(l => {
-        const regInfo = registradoresMap.get(l.registradorId);
-        return {
-          registrador_id: l.registradorId,
-          timestamp: l.timestamp || new Date().toISOString(),
-          valores: l.valores,
-          tiempo_respuesta_ms: l.tiempoMs || null,
-          exito: l.exito !== false,
-          error_mensaje: l.error || null,
-          // Incluir indice_inicial y cantidad_registros del registrador
-          indice_inicial: regInfo?.indice_inicial ?? 0,
-          cantidad_registros: regInfo?.cantidad_registros ?? (l.valores?.length || 0),
-        };
-      });
+      .map(l => ({
+        registrador_id: l.registradorId,
+        timestamp: l.timestamp || new Date().toISOString(),
+        valores: l.valores,
+        tiempo_respuesta_ms: l.tiempoMs || null,
+        exito: l.exito !== false,
+        error_mensaje: l.error || null,
+      }));
 
     if (lecturasValidas.length === 0) {
       return res.status(400).json({ error: 'Ninguna lectura válida para este agente' });
