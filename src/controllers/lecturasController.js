@@ -142,8 +142,36 @@ async function obtenerUltimaLecturaPorWorkspace(req, res) {
   }
 }
 
+/**
+ * Obtiene las últimas lecturas de un registrador
+ * GET /api/registradores/:registradorId/lecturas
+ */
+async function obtenerUltimasLecturasPorRegistrador(req, res) {
+  try {
+    const { registradorId } = req.params;
+    const { limite = 1 } = req.query;
+
+    const { data, error } = await supabase
+      .from('lecturas')
+      .select('*')
+      .eq('registrador_id', registradorId)
+      .order('timestamp', { ascending: false })
+      .limit(parseInt(limite));
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error obteniendo lecturas por registrador:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
 module.exports = {
   obtenerUltimasLecturas,
   obtenerLecturasHistoricas,
   obtenerUltimaLecturaPorWorkspace,
+  obtenerUltimasLecturasPorRegistrador,
 };
