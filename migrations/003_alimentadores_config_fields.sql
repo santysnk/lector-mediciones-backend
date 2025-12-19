@@ -29,9 +29,9 @@ CREATE INDEX IF NOT EXISTS idx_alimentadores_registrador ON alimentadores(regist
 -- 3. Agregar columna intervalo_consulta_ms
 -- ============================================
 -- Intervalo en milisegundos para consultar la última lectura desde el frontend
--- Por defecto 5000ms (5 segundos)
+-- Por defecto 60000ms (60 segundos)
 ALTER TABLE alimentadores
-ADD COLUMN IF NOT EXISTS intervalo_consulta_ms INTEGER DEFAULT 5000;
+ADD COLUMN IF NOT EXISTS intervalo_consulta_ms INTEGER DEFAULT 60000;
 
 COMMENT ON COLUMN alimentadores.intervalo_consulta_ms IS 'Intervalo en ms para que el frontend consulte la última lectura';
 
@@ -98,7 +98,7 @@ ALTER TABLE alimentadores DROP COLUMN IF EXISTS config_analizador;
 -- activo                BOOLEAN DEFAULT true
 -- color                 VARCHAR(20) DEFAULT '#3b82f6'      [NUEVO]
 -- registrador_id        UUID (FK a registradores)          [NUEVO]
--- intervalo_consulta_ms INTEGER DEFAULT 5000               [NUEVO]
+-- intervalo_consulta_ms INTEGER DEFAULT 60000              [NUEVO]
 -- card_design           JSONB DEFAULT '{}'                 [NUEVO]
 -- gap_horizontal        INTEGER DEFAULT 0                  [NUEVO]
 -- created_at            TIMESTAMPTZ

@@ -59,7 +59,7 @@ const crearAlimentador = async (req, res) => {
         color: color || '#3b82f6',
         orden: nuevoOrden,
         registrador_id: registrador_id || null,
-        intervalo_consulta_ms: intervalo_consulta_ms || 5000,
+        intervalo_consulta_ms: intervalo_consulta_ms || 60000,
         card_design: card_design || {},
         gap_horizontal: gap_horizontal || 0,
       })
