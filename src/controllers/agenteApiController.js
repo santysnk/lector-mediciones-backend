@@ -155,6 +155,8 @@ async function obtenerConfiguracion(req, res) {
     const agenteId = req.agente.id;
 
     // Obtener registradores asignados al agente
+    // Nota: Se usa alimentadores!alimentadores_registrador_id_fkey para desambiguar
+    // porque existen dos FK entre registradores y alimentadores
     const { data: registradores, error } = await supabase
       .from('registradores')
       .select(`
@@ -171,7 +173,7 @@ async function obtenerConfiguracion(req, res) {
         activo,
         alimentador_id,
         tipo_registrador_id,
-        alimentadores(id, nombre, puesto_id, puestos(id, nombre, workspace_id))
+        alimentadores!alimentadores_registrador_id_fkey(id, nombre, puesto_id, puestos(id, nombre, workspace_id))
       `)
       .eq('agente_id', agenteId)
       .eq('activo', true);
