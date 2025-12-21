@@ -154,7 +154,7 @@ const crearAlimentador = async (req, res) => {
  */
 const actualizarAlimentador = async (req, res) => {
   const { id } = req.params;
-  const { nombre, color, orden, registrador_id, intervalo_consulta_ms, card_design, gap_horizontal } = req.body;
+  const { nombre, color, orden, registrador_id, intervalo_consulta_ms, card_design, gap_horizontal, escala } = req.body;
   const userId = req.user.id;
 
   try {
@@ -177,6 +177,7 @@ const actualizarAlimentador = async (req, res) => {
     if (intervalo_consulta_ms !== undefined) updates.intervalo_consulta_ms = intervalo_consulta_ms;
     if (card_design !== undefined) updates.card_design = card_design;
     if (gap_horizontal !== undefined) updates.gap_horizontal = gap_horizontal;
+    if (escala !== undefined) updates.escala = escala;
 
     const { data, error } = await supabase
       .from('alimentadores')
