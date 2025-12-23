@@ -143,6 +143,64 @@ async function obtenerUltimaLecturaPorWorkspace(req, res) {
 }
 
 /**
+ * Obtiene lecturas históricas de un registrador en un rango de tiempo
+ * GET /api/registradores/:registradorId/lecturas/historico
+ *
+ * Query params:
+ *   - desde: fecha ISO inicio del rango
+ *   - hasta: fecha ISO fin del rango
+ *
+ * Incluye indice_inicial para que el frontend pueda mapear valores a direcciones Modbus.
+ */
+async function obtenerLecturasHistoricasPorRegistrador(req, res) {
+  try {
+    const { registradorId } = req.params;
+    const { desde, hasta } = req.query;
+
+    if (!desde || !hasta) {
+      return res.status(400).json({ error: 'Se requieren parámetros desde y hasta' });
+    }
+
+    // Obtener el indice_inicial del registrador
+    const { data: registrador, error: errorReg } = await supabase
+      .from('registradores')
+      .select('indice_inicial, cantidad_registros')
+      .eq('id', registradorId)
+      .single();
+
+    if (errorReg) {
+      console.error('Error obteniendo registrador:', errorReg);
+      // Continuar sin el indice_inicial si hay error
+    }
+
+    // Obtener las lecturas en el rango
+    const { data, error } = await supabase
+      .from('lecturas')
+      .select('*')
+      .eq('registrador_id', registradorId)
+      .gte('timestamp', desde)
+      .lte('timestamp', hasta)
+      .order('timestamp', { ascending: true });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Agregar indice_inicial del registrador a cada lectura
+    const lecturasConIndice = data.map(lectura => ({
+      ...lectura,
+      indice_inicial: registrador?.indice_inicial ?? 0,
+      cantidad_registros: registrador?.cantidad_registros ?? (lectura.valores?.length || 0),
+    }));
+
+    res.json(lecturasConIndice);
+  } catch (error) {
+    console.error('Error obteniendo lecturas históricas por registrador:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+/**
  * Obtiene las últimas lecturas de un registrador
  * GET /api/registradores/:registradorId/lecturas
  *
@@ -198,4 +256,5 @@ module.exports = {
   obtenerLecturasHistoricas,
   obtenerUltimaLecturaPorWorkspace,
   obtenerUltimasLecturasPorRegistrador,
+  obtenerLecturasHistoricasPorRegistrador,
 };

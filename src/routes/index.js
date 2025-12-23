@@ -86,6 +86,7 @@ router.get('/alimentadores/:alimentadorId/lecturas', verificarToken, lecturasCon
 router.get('/alimentadores/:alimentadorId/lecturas/historico', verificarToken, lecturasController.obtenerLecturasHistoricas);
 router.get('/workspaces/:workspaceId/lecturas/ultima', verificarToken, lecturasController.obtenerUltimaLecturaPorWorkspace);
 router.get('/registradores/:registradorId/lecturas', verificarToken, lecturasController.obtenerUltimasLecturasPorRegistrador);
+router.get('/registradores/:registradorId/lecturas/historico', verificarToken, lecturasController.obtenerLecturasHistoricasPorRegistrador);
 
 // ============================================
 // Rutas de test de conexión Modbus
