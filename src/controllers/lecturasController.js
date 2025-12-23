@@ -151,6 +151,9 @@ async function obtenerUltimaLecturaPorWorkspace(req, res) {
  *   - hasta: fecha ISO fin del rango
  *
  * Incluye indice_inicial para que el frontend pueda mapear valores a direcciones Modbus.
+ *
+ * NOTA: Supabase tiene límite de 1000 registros por consulta por defecto.
+ * Este endpoint pagina automáticamente para obtener TODOS los datos del rango.
  */
 async function obtenerLecturasHistoricasPorRegistrador(req, res) {
   try {
@@ -173,21 +176,40 @@ async function obtenerLecturasHistoricasPorRegistrador(req, res) {
       // Continuar sin el indice_inicial si hay error
     }
 
-    // Obtener las lecturas en el rango
-    const { data, error } = await supabase
-      .from('lecturas')
-      .select('*')
-      .eq('registrador_id', registradorId)
-      .gte('timestamp', desde)
-      .lte('timestamp', hasta)
-      .order('timestamp', { ascending: true });
+    // Obtener TODAS las lecturas paginando (Supabase límite 1000 por consulta)
+    const PAGE_SIZE = 1000;
+    let allData = [];
+    let offset = 0;
+    let hasMore = true;
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('lecturas')
+        .select('*')
+        .eq('registrador_id', registradorId)
+        .gte('timestamp', desde)
+        .lte('timestamp', hasta)
+        .order('timestamp', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+
+      if (data && data.length > 0) {
+        allData = allData.concat(data);
+        offset += PAGE_SIZE;
+        // Si recibimos menos de PAGE_SIZE, no hay más datos
+        hasMore = data.length === PAGE_SIZE;
+      } else {
+        hasMore = false;
+      }
     }
 
+    console.log(`[Lecturas] Registrador ${registradorId}: ${allData.length} lecturas entre ${desde} y ${hasta}`);
+
     // Agregar indice_inicial del registrador a cada lectura
-    const lecturasConIndice = data.map(lectura => ({
+    const lecturasConIndice = allData.map(lectura => ({
       ...lectura,
       indice_inicial: registrador?.indice_inicial ?? 0,
       cantidad_registros: registrador?.cantidad_registros ?? (lectura.valores?.length || 0),
