@@ -393,6 +393,7 @@ async function obtenerDetallesUsuario(req, res) {
     );
 
     // 3. Obtener workspaces donde el usuario es invitado (usa tabla usuario_workspaces)
+    // Nota: workspaces usa creado_por para el propietario, no usuario_id
     const { data: permisosRecibidos, error: errorPermisos } = await supabase
       .from('usuario_workspaces')
       .select(`
@@ -407,12 +408,7 @@ async function obtenerDetallesUsuario(req, res) {
         workspaces (
           id,
           nombre,
-          usuario_id,
-          usuarios (
-            id,
-            nombre,
-            email
-          )
+          creado_por
         )
       `)
       .eq('usuario_id', usuarioId);
@@ -423,18 +419,30 @@ async function obtenerDetallesUsuario(req, res) {
 
     console.log(`[AdminUsuarios] Permisos recibidos para ${usuarioId}:`, JSON.stringify(permisosRecibidos, null, 2));
 
-    const workspacesComoInvitado = (permisosRecibidos || [])
-      .filter(p => p.workspaces)
-      .map(p => ({
-        id: p.workspaces.id,
-        nombre: p.workspaces.nombre,
-        rol: p.roles?.codigo || 'observador',
-        propietario: p.workspaces.usuarios ? {
-          id: p.workspaces.usuarios.id,
-          nombre: p.workspaces.usuarios.nombre,
-          email: p.workspaces.usuarios.email,
-        } : null,
-      }));
+    // Obtener información de los propietarios de los workspaces
+    const workspacesComoInvitado = await Promise.all(
+      (permisosRecibidos || [])
+        .filter(p => p.workspaces)
+        .map(async (p) => {
+          // Obtener datos del propietario
+          let propietario = null;
+          if (p.workspaces.creado_por) {
+            const { data: usuarioPropietario } = await supabase
+              .from('usuarios')
+              .select('id, nombre, email')
+              .eq('id', p.workspaces.creado_por)
+              .single();
+            propietario = usuarioPropietario;
+          }
+
+          return {
+            id: p.workspaces.id,
+            nombre: p.workspaces.nombre,
+            rol: p.roles?.codigo || 'observador',
+            propietario,
+          };
+        })
+    );
 
     res.json({
       workspacesPropios: workspacesConDetalles,
