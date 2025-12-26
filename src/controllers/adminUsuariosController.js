@@ -408,8 +408,9 @@ async function obtenerDetallesUsuario(req, res) {
               nombre: av.agentes.nombre,
               activo: av.agentes.activo,
             })),
+          // Filtrar al creador de la lista de invitados (no es un invitado, es el dueño)
           invitados: (permisosOtorgados || [])
-            .filter(p => p.usuarios)
+            .filter(p => p.usuarios && p.usuarios.id !== usuarioId)
             .map(p => ({
               id: p.usuarios.id,
               nombre: p.usuarios.nombre,
