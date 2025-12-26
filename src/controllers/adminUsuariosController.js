@@ -291,9 +291,156 @@ async function listarAgentesDisponibles(req, res) {
   }
 }
 
+/**
+ * Obtener detalles completos de un usuario
+ * GET /api/admin/usuarios/:id/detalles
+ *
+ * Retorna:
+ * - Workspaces propios con puestos, agentes vinculados y permisos otorgados
+ * - Workspaces donde es invitado con rol asignado
+ */
+async function obtenerDetallesUsuario(req, res) {
+  try {
+    const userId = req.user.id;
+    const { id: usuarioId } = req.params;
+
+    // Verificar que es superadmin
+    if (!(await esSuperadmin(userId))) {
+      return res.status(403).json({ error: 'Se requiere rol superadmin' });
+    }
+
+    // 1. Obtener workspaces propios del usuario
+    const { data: workspacesPropios, error: errorWs } = await supabase
+      .from('workspaces')
+      .select(`
+        id,
+        nombre,
+        created_at
+      `)
+      .eq('usuario_id', usuarioId)
+      .order('created_at', { ascending: true });
+
+    if (errorWs) {
+      console.error('Error obteniendo workspaces:', errorWs);
+      return res.status(500).json({ error: 'Error al obtener workspaces' });
+    }
+
+    // 2. Para cada workspace propio, obtener puestos, agentes y permisos
+    const workspacesConDetalles = await Promise.all(
+      (workspacesPropios || []).map(async (ws) => {
+        // Obtener puestos del workspace
+        const { data: puestos } = await supabase
+          .from('puestos')
+          .select('id, nombre')
+          .eq('workspace_id', ws.id)
+          .order('orden', { ascending: true });
+
+        // Obtener agentes vinculados al workspace
+        const { data: agentesVinculados } = await supabase
+          .from('workspace_agentes')
+          .select(`
+            agente_id,
+            agentes (
+              id,
+              nombre,
+              activo
+            )
+          `)
+          .eq('workspace_id', ws.id);
+
+        // Obtener permisos otorgados (invitados) en este workspace
+        const { data: permisosOtorgados } = await supabase
+          .from('permisos')
+          .select(`
+            id,
+            rol,
+            usuarios:usuario_id (
+              id,
+              nombre,
+              email
+            )
+          `)
+          .eq('workspace_id', ws.id);
+
+        return {
+          id: ws.id,
+          nombre: ws.nombre,
+          createdAt: ws.created_at,
+          puestos: puestos || [],
+          cantidadPuestos: puestos?.length || 0,
+          agentes: (agentesVinculados || [])
+            .filter(av => av.agentes)
+            .map(av => ({
+              id: av.agentes.id,
+              nombre: av.agentes.nombre,
+              activo: av.agentes.activo,
+            })),
+          invitados: (permisosOtorgados || [])
+            .filter(p => p.usuarios)
+            .map(p => ({
+              id: p.usuarios.id,
+              nombre: p.usuarios.nombre,
+              email: p.usuarios.email,
+              rol: p.rol,
+            })),
+        };
+      })
+    );
+
+    // 3. Obtener workspaces donde el usuario es invitado
+    const { data: permisosRecibidos, error: errorPermisos } = await supabase
+      .from('permisos')
+      .select(`
+        id,
+        rol,
+        workspaces:workspace_id (
+          id,
+          nombre,
+          usuarios:usuario_id (
+            id,
+            nombre,
+            email
+          )
+        )
+      `)
+      .eq('usuario_id', usuarioId);
+
+    if (errorPermisos) {
+      console.error('Error obteniendo permisos recibidos:', errorPermisos);
+    }
+
+    const workspacesComoInvitado = (permisosRecibidos || [])
+      .filter(p => p.workspaces)
+      .map(p => ({
+        id: p.workspaces.id,
+        nombre: p.workspaces.nombre,
+        rol: p.rol,
+        propietario: p.workspaces.usuarios ? {
+          id: p.workspaces.usuarios.id,
+          nombre: p.workspaces.usuarios.nombre,
+          email: p.workspaces.usuarios.email,
+        } : null,
+      }));
+
+    res.json({
+      workspacesPropios: workspacesConDetalles,
+      workspacesComoInvitado,
+      resumen: {
+        totalWorkspacesPropios: workspacesConDetalles.length,
+        totalPuestos: workspacesConDetalles.reduce((acc, ws) => acc + ws.cantidadPuestos, 0),
+        totalWorkspacesInvitado: workspacesComoInvitado.length,
+      },
+    });
+  } catch (error) {
+    console.error('Error en obtenerDetallesUsuario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
 module.exports = {
   listarUsuarios,
   cambiarRolUsuario,
   actualizarAgentesUsuario,
   listarAgentesDisponibles,
+  obtenerDetallesUsuario,
 };

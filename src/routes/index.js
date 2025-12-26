@@ -136,6 +136,7 @@ router.get('/agentes/:agenteId/test-registrador/:testId', verificarToken, testRe
 // Rutas de administración de usuarios (solo superadmin)
 // ============================================
 router.get('/admin/usuarios', verificarToken, adminUsuariosController.listarUsuarios);
+router.get('/admin/usuarios/:id/detalles', verificarToken, adminUsuariosController.obtenerDetallesUsuario);
 router.put('/admin/usuarios/:id/rol', verificarToken, adminUsuariosController.cambiarRolUsuario);
 router.put('/admin/usuarios/:id/agentes', verificarToken, adminUsuariosController.actualizarAgentesUsuario);
 router.get('/admin/agentes-disponibles', verificarToken, adminUsuariosController.listarAgentesDisponibles);
