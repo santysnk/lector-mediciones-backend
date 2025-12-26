@@ -430,6 +430,20 @@ async function vincular(req, res) {
   }
 }
 
+// ============================================
+// GET /api/agente/ping
+// Endpoint simple para verificar conectividad
+// No requiere autenticación
+// ============================================
+async function ping(req, res) {
+  res.json({
+    ok: true,
+    mensaje: 'Backend accesible',
+    timestamp: new Date().toISOString(),
+    servidor: process.env.RENDER_SERVICE_NAME || 'local',
+  });
+}
+
 module.exports = {
   autenticar,
   heartbeat,
@@ -437,4 +451,5 @@ module.exports = {
   enviarLecturas,
   enviarLog,
   vincular,
+  ping,
 };

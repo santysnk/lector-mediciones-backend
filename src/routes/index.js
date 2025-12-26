@@ -191,7 +191,8 @@ router.post('/registradores/:id/toggle-activo', verificarToken, registradoresCon
 // ============================================
 // Rutas REST para agentes
 // ============================================
-// Sin autenticación (el agente se autentica con clave secreta)
+// Sin autenticación
+router.get('/agente/ping', agenteApiController.ping);
 router.post('/agente/auth', agenteApiController.autenticar);
 
 // Con autenticación JWT del agente
