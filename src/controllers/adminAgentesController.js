@@ -4,6 +4,7 @@
 const supabase = require('../config/supabase');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
+const { notificarConfiguracionCambiada } = require('./sseController');
 
 /**
  * Genera una clave secreta para el agente
@@ -669,6 +670,9 @@ async function crearRegistradorAgente(req, res) {
       return res.status(500).json({ error: 'Error creando registrador', detalle: errorCrear.message });
     }
 
+    // Notificar al agente vía SSE que su configuración cambió
+    notificarConfiguracionCambiada(agenteId, `Registrador "${nombre}" creado`);
+
     res.status(201).json(registrador);
   } catch (err) {
     console.error('Error en crearRegistradorAgente:', err);
@@ -727,6 +731,9 @@ async function actualizarRegistradorAgente(req, res) {
       return res.status(500).json({ error: 'Error actualizando registrador' });
     }
 
+    // Notificar al agente vía SSE que su configuración cambió
+    notificarConfiguracionCambiada(agenteId, `Registrador "${registrador.nombre}" actualizado`);
+
     res.json(registrador);
   } catch (err) {
     console.error('Error en actualizarRegistradorAgente:', err);
@@ -769,6 +776,9 @@ async function eliminarRegistradorAgente(req, res) {
       console.error('Error eliminando registrador:', errorEliminar);
       return res.status(500).json({ error: 'Error eliminando registrador' });
     }
+
+    // Notificar al agente vía SSE que su configuración cambió
+    notificarConfiguracionCambiada(agenteId, `Registrador "${regExistente.nombre}" eliminado`);
 
     res.json({ mensaje: `Registrador "${regExistente.nombre}" eliminado correctamente` });
   } catch (err) {
@@ -815,6 +825,10 @@ async function toggleRegistradorAgente(req, res) {
       console.error('Error actualizando estado:', errorActualizar);
       return res.status(500).json({ error: 'Error actualizando estado' });
     }
+
+    // Notificar al agente vía SSE que su configuración cambió
+    const accion = nuevoEstado ? 'activado' : 'desactivado';
+    notificarConfiguracionCambiada(agenteId, `Registrador "${regExistente.nombre}" ${accion}`);
 
     res.json({
       registrador,

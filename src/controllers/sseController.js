@@ -145,6 +145,20 @@ function registrarTestRealizado(ip, puerto) {
 }
 
 /**
+ * Notifica a un agente que su configuración ha cambiado
+ * El agente debe hacer GET /agente/config para obtener la nueva configuración
+ * @param {string} agenteId - ID del agente a notificar
+ * @param {string} motivo - Descripción del cambio (crear/actualizar/eliminar registrador)
+ * @returns {boolean} - true si se notificó, false si el agente no está conectado
+ */
+function notificarConfiguracionCambiada(agenteId, motivo = 'Configuración actualizada') {
+  return enviarEventoAgente(agenteId, 'config-actualizada', {
+    motivo,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
  * Obtiene estadísticas de conexiones SSE
  */
 function obtenerEstadisticas() {
@@ -164,5 +178,6 @@ module.exports = {
   agenteConectado,
   verificarCooldown,
   registrarTestRealizado,
+  notificarConfiguracionCambiada,
   obtenerEstadisticas,
 };
