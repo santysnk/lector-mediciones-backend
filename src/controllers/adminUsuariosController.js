@@ -348,13 +348,18 @@ async function obtenerDetallesUsuario(req, res) {
           `)
           .eq('workspace_id', ws.id);
 
-        // Obtener permisos otorgados (invitados) en este workspace
+        // Obtener permisos otorgados (invitados) en este workspace (usa tabla usuario_workspaces)
         const { data: permisosOtorgados } = await supabase
-          .from('permisos')
+          .from('usuario_workspaces')
           .select(`
             id,
-            rol,
-            usuarios:usuario_id (
+            rol_id,
+            roles (
+              id,
+              codigo,
+              nombre
+            ),
+            usuarios (
               id,
               nombre,
               email
@@ -381,19 +386,24 @@ async function obtenerDetallesUsuario(req, res) {
               id: p.usuarios.id,
               nombre: p.usuarios.nombre,
               email: p.usuarios.email,
-              rol: p.rol,
+              rol: p.roles?.codigo || 'observador',
             })),
         };
       })
     );
 
-    // 3. Obtener workspaces donde el usuario es invitado
+    // 3. Obtener workspaces donde el usuario es invitado (usa tabla usuario_workspaces)
     const { data: permisosRecibidos, error: errorPermisos } = await supabase
-      .from('permisos')
+      .from('usuario_workspaces')
       .select(`
         id,
-        rol,
+        rol_id,
         workspace_id,
+        roles (
+          id,
+          codigo,
+          nombre
+        ),
         workspaces (
           id,
           nombre,
@@ -418,7 +428,7 @@ async function obtenerDetallesUsuario(req, res) {
       .map(p => ({
         id: p.workspaces.id,
         nombre: p.workspaces.nombre,
-        rol: p.rol,
+        rol: p.roles?.codigo || 'observador',
         propietario: p.workspaces.usuarios ? {
           id: p.workspaces.usuarios.id,
           nombre: p.workspaces.usuarios.nombre,
