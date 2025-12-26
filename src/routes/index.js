@@ -31,6 +31,51 @@ router.get('/health', (req, res) => {
 });
 
 // ============================================
+// Endpoint de diagnóstico temporal (ELIMINAR DESPUÉS)
+// ============================================
+const supabase = require('../config/supabase');
+router.get('/debug/usuario-agentes', async (req, res) => {
+  try {
+    // Intentar leer de la tabla
+    const { data, error, count } = await supabase
+      .from('usuario_agentes')
+      .select('*', { count: 'exact' })
+      .limit(5);
+
+    if (error) {
+      return res.json({
+        tablaExiste: false,
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        }
+      });
+    }
+
+    // Intentar un insert de prueba (que fallaría por FK si no hay datos válidos)
+    const { error: insertError } = await supabase
+      .from('usuario_agentes')
+      .insert({ usuario_id: '00000000-0000-0000-0000-000000000000', agente_id: null, acceso_total: true })
+      .select();
+
+    res.json({
+      tablaExiste: true,
+      registrosActuales: count,
+      muestraDatos: data,
+      testInsert: insertError ? {
+        code: insertError.code,
+        message: insertError.message,
+        hint: insertError.hint
+      } : 'Insert funcionaría (no ejecutado realmente)'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================
 // Rutas de usuarios
 // ============================================
 router.get('/usuarios/perfil', verificarToken, usuariosController.obtenerPerfil);
