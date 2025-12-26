@@ -62,7 +62,6 @@ async function autenticar(req, res) {
     }
 
     if (!agenteEncontrado) {
-      console.log(`[AgenteAPI] Autenticación fallida desde ${clientIp}`);
       return res.status(401).json({ error: 'Clave inválida' });
     }
 
@@ -89,8 +88,6 @@ async function autenticar(req, res) {
       .from('workspace_agentes')
       .select('workspace_id, workspaces(id, nombre)')
       .eq('agente_id', agenteEncontrado.id);
-
-    console.log(`[AgenteAPI] Agente autenticado: ${agenteEncontrado.nombre} (${agenteEncontrado.id.substring(0, 8)}...)`);
 
     res.json({
       exito: true,

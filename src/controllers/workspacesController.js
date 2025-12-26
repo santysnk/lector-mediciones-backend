@@ -24,12 +24,8 @@ const obtenerWorkspaces = async (req, res) => {
 
     if (errorAsignaciones) throw errorAsignaciones;
 
-    // DEBUG: Ver qué devuelve la consulta
-    console.log(`[Workspaces] Asignaciones para usuario ${userId}:`, JSON.stringify(asignaciones, null, 2));
-
     // Formatear resultados
     const workspaces = asignaciones.map(a => {
-      console.log(`[Workspaces] Procesando workspace ${a.workspaces?.nombre}: rol_id=${a.rol_id}, roles=${JSON.stringify(a.roles)}`);
       return {
         ...a.workspaces,
         rol: a.roles?.codigo || 'observador',
@@ -248,6 +244,17 @@ const eliminarWorkspace = async (req, res) => {
 
     if (workspace?.creado_por !== userId) {
       return res.status(403).json({ error: 'Solo el creador puede eliminar el workspace' });
+    }
+
+    // Eliminar todas las preferencias de usuario asociadas al workspace
+    const { error: errorPreferencias } = await supabase
+      .from('preferencias_usuario')
+      .delete()
+      .eq('workspace_id', id);
+
+    if (errorPreferencias) {
+      console.error('Error eliminando preferencias del workspace:', errorPreferencias);
+      // Continuar aunque falle, el workspace se eliminará igual
     }
 
     const { error } = await supabase

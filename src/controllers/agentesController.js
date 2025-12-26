@@ -244,14 +244,11 @@ async function obtenerEstadoVinculacion(req, res) {
     const { workspaceId } = req.query;
     const usuarioId = req.user.id;
 
-    console.log('[obtenerEstadoVinculacion] Iniciando con workspaceId:', workspaceId, 'usuarioId:', usuarioId);
-
     if (!workspaceId) {
       return res.status(400).json({ error: 'workspaceId es requerido' });
     }
 
     // Verificar permisos (usando nueva tabla usuario_workspaces)
-    console.log('[obtenerEstadoVinculacion] Verificando permisos...');
     const { data: permiso, error: errorPermiso } = await supabase
       .from('usuario_workspaces')
       .select('rol_id, roles (codigo, nivel)')
@@ -268,16 +265,11 @@ async function obtenerEstadoVinculacion(req, res) {
         .single();
 
       if (!usuario || usuario.roles?.codigo !== 'superadmin') {
-        console.log('[obtenerEstadoVinculacion] Error permiso:', errorPermiso);
         return res.status(403).json({ error: 'No tienes permisos sobre este workspace' });
       }
-      console.log('[obtenerEstadoVinculacion] Permiso OK: superadmin global');
-    } else {
-      console.log('[obtenerEstadoVinculacion] Permiso OK:', permiso.roles?.codigo);
     }
 
-    // Obtener workspace (sin join por ahora)
-    console.log('[obtenerEstadoVinculacion] Obteniendo workspace...');
+    // Obtener workspace
     const { data: workspace, error: errorWorkspace } = await supabase
       .from('workspaces')
       .select('id, nombre, agente_id')
@@ -285,16 +277,13 @@ async function obtenerEstadoVinculacion(req, res) {
       .single();
 
     if (errorWorkspace || !workspace) {
-      console.log('[obtenerEstadoVinculacion] Error workspace:', errorWorkspace);
       return res.status(404).json({ error: 'Workspace no encontrado' });
     }
-    console.log('[obtenerEstadoVinculacion] Workspace OK:', workspace.nombre, 'agente_id:', workspace.agente_id);
 
     // Obtener datos del agente por separado si existe
     let agenteData = null;
     let conectado = false;
     if (workspace.agente_id) {
-      console.log('[obtenerEstadoVinculacion] Obteniendo agente...');
       const { data: agente, error: errorAgente } = await supabase
         .from('agentes')
         .select('id, nombre, activo, ultimo_ping')
@@ -303,7 +292,6 @@ async function obtenerEstadoVinculacion(req, res) {
 
       if (!errorAgente && agente) {
         agenteData = agente;
-        console.log('[obtenerEstadoVinculacion] Agente OK:', agente.nombre);
 
         // Determinar si está conectado (último ping hace menos de 60 segundos)
         if (agente.ultimo_ping) {
@@ -311,15 +299,11 @@ async function obtenerEstadoVinculacion(req, res) {
           const ahora = Date.now();
           const diferencia = ahora - ultimoPing;
           conectado = diferencia < 60000; // 60 segundos
-          console.log('[obtenerEstadoVinculacion] Último ping hace:', Math.round(diferencia / 1000), 's, conectado:', conectado);
         }
-      } else {
-        console.log('[obtenerEstadoVinculacion] Error agente:', errorAgente);
       }
     }
 
-    // Verificar si hay código pendiente (sin .single() para evitar error si no hay resultados)
-    console.log('[obtenerEstadoVinculacion] Buscando códigos pendientes...');
+    // Verificar si hay código pendiente
     const { data: codigosPendientes, error: errorCodigos } = await supabase
       .from('codigos_vinculacion')
       .select('codigo, expira_at')
@@ -330,15 +314,9 @@ async function obtenerEstadoVinculacion(req, res) {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    if (errorCodigos) {
-      console.log('[obtenerEstadoVinculacion] Error códigos:', errorCodigos);
-    }
-
     const codigoPendiente = codigosPendientes && codigosPendientes.length > 0
       ? codigosPendientes[0]
       : null;
-
-    console.log('[obtenerEstadoVinculacion] Código pendiente:', codigoPendiente ? 'Sí' : 'No');
 
     const respuesta = {
       vinculado: !!workspace.agente_id,
@@ -355,11 +333,10 @@ async function obtenerEstadoVinculacion(req, res) {
       } : null,
     };
 
-    console.log('[obtenerEstadoVinculacion] Enviando respuesta:', JSON.stringify(respuesta));
     res.json(respuesta);
 
   } catch (err) {
-    console.error('[obtenerEstadoVinculacion] ERROR CATCH:', err.message, err.stack);
+    console.error('Error en obtenerEstadoVinculacion:', err.message);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }

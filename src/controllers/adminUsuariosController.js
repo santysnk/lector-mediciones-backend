@@ -165,7 +165,6 @@ async function cambiarRolUsuario(req, res) {
       return res.status(500).json({ error: 'Error al actualizar rol' });
     }
 
-    console.log(`[AdminUsuarios] Rol de usuario ${usuarioId} cambiado a ${rolCodigo}`);
     res.json({ success: true, rolCodigo });
   } catch (error) {
     console.error('Error en cambiarRolUsuario:', error);
@@ -242,8 +241,6 @@ async function actualizarAgentesUsuario(req, res) {
         acceso_total: false,
       }));
 
-      console.log(`[AdminUsuarios] Insertando permisos para usuario ${usuarioId}:`, JSON.stringify(registros, null, 2));
-
       // Verificar que los agentes existen antes de insertar
       for (const agenteId of agentesIds) {
         const { data: agenteExiste, error: errorAgente } = await supabase
@@ -253,10 +250,8 @@ async function actualizarAgentesUsuario(req, res) {
           .single();
 
         if (errorAgente || !agenteExiste) {
-          console.error(`[AdminUsuarios] Agente ${agenteId} no existe:`, errorAgente);
           return res.status(400).json({ error: `Agente ${agenteId} no encontrado` });
         }
-        console.log(`[AdminUsuarios] Agente verificado: ${agenteExiste.nombre}`);
       }
 
       const { data: insertedData, error: errorInsert } = await supabase
@@ -265,23 +260,11 @@ async function actualizarAgentesUsuario(req, res) {
         .select();
 
       if (errorInsert) {
-        console.error('Error insertando agentes:', errorInsert);
-        console.error('Código de error:', errorInsert.code);
-        console.error('Mensaje:', errorInsert.message);
-        console.error('Detalles:', errorInsert.details);
-        console.error('Hint:', errorInsert.hint);
-        return res.status(500).json({
-          error: 'Error al guardar permisos',
-          detalles: errorInsert.message,
-          codigo: errorInsert.code
-        });
+        console.error('Error insertando agentes:', errorInsert.message);
+        return res.status(500).json({ error: 'Error al guardar permisos' });
       }
-
-      console.log(`[AdminUsuarios] Permisos insertados:`, JSON.stringify(insertedData, null, 2));
     }
     // Si accesoTotal=false y agentesIds=[], no se insertan permisos (sin acceso)
-
-    console.log(`[AdminUsuarios] Permisos de usuario ${usuarioId} actualizados: accesoTotal=${accesoTotal}, agentes=${agentesIds.length}`);
     res.json({ success: true, accesoTotal, agentesCount: agentesIds.length });
   } catch (error) {
     console.error('Error en actualizarAgentesUsuario:', error);
