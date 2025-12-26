@@ -30,64 +30,8 @@ function generarClaveSecreta() {
 }
 
 // ============================================
-// Autenticación de agentes (usado por WebSocket)
+// Funciones auxiliares
 // ============================================
-
-/**
- * Verifica la clave secreta del agente
- * @param {string} claveSecreta - Clave proporcionada por el agente
- * @returns {object} - { valido: boolean, agente?: object, error?: string }
- */
-async function verificarClaveAgente(claveSecreta) {
-  try {
-    // Obtener todos los agentes activos
-    const { data: agentes, error } = await supabase
-      .from('agentes')
-      .select('id, nombre, clave_hash, clave_anterior_hash, clave_rotada_at, activo')
-      .eq('activo', true);
-
-    if (error) {
-      console.error('Error obteniendo agentes:', error);
-      return { valido: false, error: 'Error de base de datos' };
-    }
-
-    // Buscar el agente cuya clave coincida
-    for (const agente of agentes) {
-      // Verificar clave actual
-      const coincideActual = await bcrypt.compare(claveSecreta, agente.clave_hash);
-      if (coincideActual) {
-        return {
-          valido: true,
-          agente: { id: agente.id, nombre: agente.nombre },
-          usoClavePrincipal: true
-        };
-      }
-
-      // Verificar clave anterior (si existe y no ha expirado - 24h)
-      if (agente.clave_anterior_hash && agente.clave_rotada_at) {
-        const rotadaHace = Date.now() - new Date(agente.clave_rotada_at).getTime();
-        const veinticuatroHoras = 24 * 60 * 60 * 1000;
-
-        if (rotadaHace < veinticuatroHoras) {
-          const coincideAnterior = await bcrypt.compare(claveSecreta, agente.clave_anterior_hash);
-          if (coincideAnterior) {
-            return {
-              valido: true,
-              agente: { id: agente.id, nombre: agente.nombre },
-              usoClavePrincipal: false,
-              advertencia: 'Usando clave anterior, por favor actualice'
-            };
-          }
-        }
-      }
-    }
-
-    return { valido: false, error: 'Clave inválida' };
-  } catch (err) {
-    console.error('Error verificando clave:', err);
-    return { valido: false, error: 'Error interno' };
-  }
-}
 
 /**
  * Registra un log de acción del agente
@@ -224,9 +168,8 @@ async function solicitarVinculacion(req, res) {
 }
 
 /**
- * POST /api/agentes/validar-vinculacion
- * El agente envía código para vincularse al workspace
- * (Llamado internamente desde WebSocket, no directamente por HTTP)
+ * Valida código de vinculación del agente
+ * (Llamado internamente desde agenteApiController)
  */
 async function validarVinculacion(codigo, agenteId, ip) {
   try {
@@ -566,8 +509,7 @@ async function rotarClave(req, res) {
 }
 
 module.exports = {
-  // Funciones para WebSocket
-  verificarClaveAgente,
+  // Funciones auxiliares
   validarVinculacion,
   registrarLogAgente,
   generarClaveSecreta,

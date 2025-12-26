@@ -382,22 +382,7 @@ async function toggleActivo(req, res) {
       return res.status(500).json({ error: 'Error actualizando estado' });
     }
 
-    // Notificar al agente que debe recargar sus registradores
-    // Importar io del index.js
-    try {
-      const { io, agentesConectados } = require('../index');
-      if (io && agentesConectados) {
-        // Emitir evento a todos los agentes conectados
-        io.emit('registradores:actualizar', {
-          agenteId: registrador.agente_id,
-          registradorId: id,
-          activo: activo,
-        });
-        console.log(`[Registradores] Notificando agente ${registrador.agente_id} sobre cambio en registrador ${id}`);
-      }
-    } catch (notifyErr) {
-      console.error('Error notificando al agente:', notifyErr.message);
-    }
+    // El agente detectará el cambio en su próximo polling de config
 
     res.json({
       registrador,
@@ -410,47 +395,10 @@ async function toggleActivo(req, res) {
   }
 }
 
-/**
- * POST /api/registradores/test-conexion
- * Prueba la conexión Modbus a un registrador via el agente conectado por WebSocket
- * Reutiliza la lógica de testConexionController con rate limiting de 60s por IP
- */
-async function testConexion(req, res) {
-  try {
-    const { ip, puerto, indiceInicial, cantidadRegistros, unitId = 1 } = req.body;
-
-    if (!ip || !puerto || indiceInicial === undefined || !cantidadRegistros) {
-      return res.status(400).json({ error: 'Faltan parámetros de conexión' });
-    }
-
-    // Importar la lógica de test conexión existente (que usa WebSocket al agente)
-    const testConexionController = require('./testConexionController');
-
-    // Crear un req simulado para reutilizar la lógica
-    const reqSimulado = {
-      body: {
-        ip,
-        puerto: parseInt(puerto),
-        unitId: parseInt(unitId),
-        indiceInicial: parseInt(indiceInicial),
-        cantRegistros: parseInt(cantidadRegistros),
-      }
-    };
-
-    // Llamar al controlador existente que maneja todo: rate limiting, WebSocket, etc.
-    await testConexionController.testConexion(reqSimulado, res);
-
-  } catch (err) {
-    console.error('Error en testConexion registradores:', err);
-    res.status(500).json({ error: err.message || 'Error interno del servidor' });
-  }
-}
-
 module.exports = {
   obtenerRegistradores,
   crearRegistrador,
   actualizarRegistrador,
   eliminarRegistrador,
   toggleActivo,
-  testConexion,
 };

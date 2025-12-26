@@ -1,5 +1,5 @@
 // src/controllers/agenteApiController.js
-// Controlador REST para comunicación con agentes (reemplaza WebSocket)
+// Controlador REST para comunicación con agentes
 
 const supabase = require('../config/supabase');
 const bcrypt = require('bcrypt');

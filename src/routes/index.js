@@ -14,7 +14,6 @@ const alimentadoresController = require('../controllers/alimentadoresController'
 const permisosController = require('../controllers/permisosController');
 const preferenciasController = require('../controllers/preferenciasController');
 const lecturasController = require('../controllers/lecturasController');
-const testConexionController = require('../controllers/testConexionController');
 const agentesController = require('../controllers/agentesController');
 const registradoresController = require('../controllers/registradoresController');
 const agenteApiController = require('../controllers/agenteApiController');
@@ -135,12 +134,6 @@ router.get('/registradores/:registradorId/lecturas', verificarToken, lecturasCon
 router.get('/registradores/:registradorId/lecturas/historico', verificarToken, lecturasController.obtenerLecturasHistoricasPorRegistrador);
 
 // ============================================
-// Rutas de test de conexión Modbus
-// ============================================
-router.post('/test-conexion', verificarToken, testConexionController.testConexion);
-router.get('/test-conexion/estado', verificarToken, testConexionController.obtenerEstado);
-
-// ============================================
 // Rutas de agentes (legacy - mantener por compatibilidad)
 // ============================================
 router.post('/agentes/solicitar-vinculacion', verificarToken, agentesController.solicitarVinculacion);
@@ -194,10 +187,9 @@ router.post('/registradores', verificarToken, registradoresController.crearRegis
 router.put('/registradores/:id', verificarToken, registradoresController.actualizarRegistrador);
 router.delete('/registradores/:id', verificarToken, registradoresController.eliminarRegistrador);
 router.post('/registradores/:id/toggle-activo', verificarToken, registradoresController.toggleActivo);
-router.post('/registradores/test-conexion', verificarToken, registradoresController.testConexion);
 
 // ============================================
-// Rutas REST para agentes (reemplaza WebSocket)
+// Rutas REST para agentes
 // ============================================
 // Sin autenticación (el agente se autentica con clave secreta)
 router.post('/agente/auth', agenteApiController.autenticar);
