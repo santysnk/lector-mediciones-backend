@@ -20,6 +20,7 @@ const registradoresController = require('../controllers/registradoresController'
 const agenteApiController = require('../controllers/agenteApiController');
 const usuariosController = require('../controllers/usuariosController');
 const adminAgentesController = require('../controllers/adminAgentesController');
+const adminUsuariosController = require('../controllers/adminUsuariosController');
 const testRegistradorController = require('../controllers/testRegistradorController');
 
 // ============================================
@@ -130,6 +131,14 @@ router.post('/agentes/:agenteId/registradores/:registradorId/toggle', verificarT
 // Test de conexión de registrador (superadmin solicita, agente ejecuta)
 router.post('/agentes/:agenteId/test-registrador', verificarToken, testRegistradorController.solicitarTest);
 router.get('/agentes/:agenteId/test-registrador/:testId', verificarToken, testRegistradorController.consultarTest);
+
+// ============================================
+// Rutas de administración de usuarios (solo superadmin)
+// ============================================
+router.get('/admin/usuarios', verificarToken, adminUsuariosController.listarUsuarios);
+router.put('/admin/usuarios/:id/rol', verificarToken, adminUsuariosController.cambiarRolUsuario);
+router.put('/admin/usuarios/:id/agentes', verificarToken, adminUsuariosController.actualizarAgentesUsuario);
+router.get('/admin/agentes-disponibles', verificarToken, adminUsuariosController.listarAgentesDisponibles);
 
 // ============================================
 // Rutas de registradores

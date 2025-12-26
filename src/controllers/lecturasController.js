@@ -4,6 +4,73 @@
 const supabase = require('../config/supabase');
 
 /**
+ * Helper: Obtiene los IDs de agentes a los que el usuario tiene acceso
+ * @returns {null} si tiene acceso total (sin filtro)
+ * @returns {string[]} array de IDs de agentes permitidos
+ * @returns {[]} array vacío si no tiene permisos configurados
+ */
+async function obtenerAgentesPermitidos(usuarioId) {
+  // Primero verificar si es superadmin (tiene acceso a todo)
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('roles(codigo)')
+    .eq('id', usuarioId)
+    .single();
+
+  if (usuario?.roles?.codigo === 'superadmin') {
+    return null; // Acceso total
+  }
+
+  // Obtener permisos de agentes del usuario
+  const { data: permisos } = await supabase
+    .from('usuario_agentes')
+    .select('agente_id, acceso_total')
+    .eq('usuario_id', usuarioId);
+
+  if (!permisos || permisos.length === 0) {
+    return []; // Sin permisos configurados
+  }
+
+  // Si tiene acceso total, retornar null (sin filtro)
+  if (permisos.some(p => p.acceso_total)) {
+    return null;
+  }
+
+  // Retornar array de IDs de agentes específicos
+  return permisos.filter(p => p.agente_id).map(p => p.agente_id);
+}
+
+/**
+ * Helper: Verifica si el usuario tiene acceso a un registrador específico
+ */
+async function tieneAccesoARegistrador(usuarioId, registradorId) {
+  const agentesPermitidos = await obtenerAgentesPermitidos(usuarioId);
+
+  // Acceso total
+  if (agentesPermitidos === null) {
+    return true;
+  }
+
+  // Sin permisos
+  if (agentesPermitidos.length === 0) {
+    return false;
+  }
+
+  // Verificar si el registrador pertenece a un agente permitido
+  const { data: registrador } = await supabase
+    .from('registradores')
+    .select('agente_id')
+    .eq('id', registradorId)
+    .single();
+
+  if (!registrador) {
+    return false;
+  }
+
+  return agentesPermitidos.includes(registrador.agente_id);
+}
+
+/**
  * Obtiene las últimas lecturas de un alimentador
  * GET /api/alimentadores/:alimentadorId/lecturas
  */
@@ -228,11 +295,22 @@ async function obtenerLecturasHistoricasPorRegistrador(req, res) {
  *
  * Incluye indice_inicial y cantidad_registros del registrador para que
  * el frontend pueda mapear los valores del array a direcciones Modbus.
+ *
+ * NOTA: Filtra según los permisos del usuario (tabla usuario_agentes)
  */
 async function obtenerUltimasLecturasPorRegistrador(req, res) {
   try {
     const { registradorId } = req.params;
     const { limite = 1 } = req.query;
+    const usuarioId = req.user?.id;
+
+    // Verificar permisos de acceso al registrador
+    if (usuarioId) {
+      const tieneAcceso = await tieneAccesoARegistrador(usuarioId, registradorId);
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permiso para ver lecturas de este registrador' });
+      }
+    }
 
     // Primero obtener el indice_inicial del registrador
     const { data: registrador, error: errorReg } = await supabase
