@@ -242,7 +242,22 @@ async function actualizarAgentesUsuario(req, res) {
         acceso_total: false,
       }));
 
-      console.log(`[AdminUsuarios] Insertando permisos:`, JSON.stringify(registros, null, 2));
+      console.log(`[AdminUsuarios] Insertando permisos para usuario ${usuarioId}:`, JSON.stringify(registros, null, 2));
+
+      // Verificar que los agentes existen antes de insertar
+      for (const agenteId of agentesIds) {
+        const { data: agenteExiste, error: errorAgente } = await supabase
+          .from('agentes')
+          .select('id, nombre')
+          .eq('id', agenteId)
+          .single();
+
+        if (errorAgente || !agenteExiste) {
+          console.error(`[AdminUsuarios] Agente ${agenteId} no existe:`, errorAgente);
+          return res.status(400).json({ error: `Agente ${agenteId} no encontrado` });
+        }
+        console.log(`[AdminUsuarios] Agente verificado: ${agenteExiste.nombre}`);
+      }
 
       const { data: insertedData, error: errorInsert } = await supabase
         .from('usuario_agentes')
@@ -251,8 +266,15 @@ async function actualizarAgentesUsuario(req, res) {
 
       if (errorInsert) {
         console.error('Error insertando agentes:', errorInsert);
-        console.error('Detalles del error:', JSON.stringify(errorInsert, null, 2));
-        return res.status(500).json({ error: 'Error al guardar permisos', detalles: errorInsert.message });
+        console.error('Código de error:', errorInsert.code);
+        console.error('Mensaje:', errorInsert.message);
+        console.error('Detalles:', errorInsert.details);
+        console.error('Hint:', errorInsert.hint);
+        return res.status(500).json({
+          error: 'Error al guardar permisos',
+          detalles: errorInsert.message,
+          codigo: errorInsert.code
+        });
       }
 
       console.log(`[AdminUsuarios] Permisos insertados:`, JSON.stringify(insertedData, null, 2));
