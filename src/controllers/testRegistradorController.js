@@ -1,9 +1,10 @@
 // src/controllers/testRegistradorController.js
 // Controlador para tests de conexión de registradores
+// Usa SSE para notificar al agente en tiempo real
 
 const supabase = require('../config/supabase');
+const { enviarEventoAgente, agenteConectado, verificarCooldown, registrarTestRealizado } = require('./sseController');
 
-const COOLDOWN_SEGUNDOS = 60; // Tiempo mínimo entre tests del mismo agente
 const TIMEOUT_SEGUNDOS = 30; // Tiempo máximo de espera para resultado
 
 /**
@@ -22,6 +23,7 @@ async function esSuperadmin(userId) {
 /**
  * POST /api/agentes/:agenteId/test-registrador
  * Solicita un test de conexión para un registrador (solo superadmin)
+ * Envía el comando al agente via SSE en tiempo real
  */
 async function solicitarTest(req, res) {
   try {
@@ -52,33 +54,35 @@ async function solicitarTest(req, res) {
       return res.status(404).json({ error: 'Agente no encontrado' });
     }
 
-    // Verificar cooldown - buscar último test de este agente
-    const { data: testReciente } = await supabase
-      .from('test_registrador')
-      .select('id, created_at')
-      .eq('agente_id', agenteId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (testReciente) {
-      const tiempoDesdeUltimo = (Date.now() - new Date(testReciente.created_at).getTime()) / 1000;
-      if (tiempoDesdeUltimo < COOLDOWN_SEGUNDOS) {
-        const esperarSegundos = Math.ceil(COOLDOWN_SEGUNDOS - tiempoDesdeUltimo);
-        return res.status(429).json({
-          error: `Debes esperar ${esperarSegundos} segundos antes de hacer otro test`,
-          esperarSegundos
-        });
-      }
+    // Verificar que el agente está conectado por SSE
+    if (!agenteConectado(agenteId)) {
+      return res.status(503).json({
+        error: 'El agente no está conectado',
+        detalle: 'El agente debe estar en línea para ejecutar tests'
+      });
     }
 
-    // Crear el test pendiente
+    // Verificar cooldown por IP:puerto (no por agente)
+    const puertoNum = parseInt(puerto);
+    const cooldown = verificarCooldown(ip, puertoNum);
+
+    if (!cooldown.permitido) {
+      return res.status(429).json({
+        error: `Debes esperar ${cooldown.esperarSegundos} segundos antes de hacer otro test a ${ip}:${puertoNum}`,
+        esperarSegundos: cooldown.esperarSegundos
+      });
+    }
+
+    // Registrar el cooldown ANTES de crear el test
+    registrarTestRealizado(ip, puertoNum);
+
+    // Crear el test pendiente en DB
     const { data: test, error: errorCrear } = await supabase
       .from('test_registrador')
       .insert({
         agente_id: agenteId,
         ip,
-        puerto: parseInt(puerto),
+        puerto: puertoNum,
         unit_id: parseInt(unitId) || 1,
         indice_inicial: parseInt(indiceInicial),
         cantidad_registros: parseInt(cantidadRegistros),
@@ -93,9 +97,42 @@ async function solicitarTest(req, res) {
       return res.status(500).json({ error: 'Error creando test' });
     }
 
+    // Enviar comando al agente via SSE
+    const enviado = enviarEventoAgente(agenteId, 'test-registrador', {
+      testId: test.id,
+      ip: test.ip,
+      puerto: test.puerto,
+      unitId: test.unit_id,
+      indiceInicial: test.indice_inicial,
+      cantidadRegistros: test.cantidad_registros,
+    });
+
+    if (!enviado) {
+      // El agente se desconectó justo después de verificar
+      await supabase
+        .from('test_registrador')
+        .update({
+          estado: 'error',
+          error_mensaje: 'El agente se desconectó antes de recibir el comando',
+          completado_at: new Date().toISOString()
+        })
+        .eq('id', test.id);
+
+      return res.status(503).json({
+        error: 'No se pudo enviar el comando al agente',
+        testId: test.id
+      });
+    }
+
+    // Actualizar estado a "enviado"
+    await supabase
+      .from('test_registrador')
+      .update({ estado: 'enviado' })
+      .eq('id', test.id);
+
     res.status(201).json({
       testId: test.id,
-      mensaje: 'Test solicitado. Esperando respuesta del agente...',
+      mensaje: 'Test enviado al agente. Esperando resultado...',
       timeoutSegundos: TIMEOUT_SEGUNDOS,
     });
   } catch (err) {
@@ -130,8 +167,8 @@ async function consultarTest(req, res) {
       return res.status(404).json({ error: 'Test no encontrado' });
     }
 
-    // Verificar timeout si sigue pendiente
-    if (test.estado === 'pendiente') {
+    // Verificar timeout si sigue pendiente o enviado
+    if (test.estado === 'pendiente' || test.estado === 'enviado') {
       const tiempoEsperando = (Date.now() - new Date(test.created_at).getTime()) / 1000;
       if (tiempoEsperando > TIMEOUT_SEGUNDOS) {
         // Marcar como timeout
@@ -164,33 +201,6 @@ async function consultarTest(req, res) {
 // ============================================
 
 /**
- * GET /api/agente/tests-pendientes
- * El agente consulta si tiene tests pendientes (autenticado con JWT de agente)
- */
-async function obtenerTestsPendientes(req, res) {
-  try {
-    const agenteId = req.agente.id;
-
-    const { data: tests, error } = await supabase
-      .from('test_registrador')
-      .select('*')
-      .eq('agente_id', agenteId)
-      .eq('estado', 'pendiente')
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Error obteniendo tests pendientes:', error);
-      return res.status(500).json({ error: 'Error obteniendo tests' });
-    }
-
-    res.json(tests || []);
-  } catch (err) {
-    console.error('Error en obtenerTestsPendientes:', err);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-}
-
-/**
  * POST /api/agente/tests/:testId/resultado
  * El agente reporta el resultado de un test (autenticado con JWT de agente)
  */
@@ -212,7 +222,7 @@ async function reportarResultadoTest(req, res) {
       return res.status(404).json({ error: 'Test no encontrado' });
     }
 
-    if (test.estado !== 'pendiente' && test.estado !== 'ejecutando') {
+    if (test.estado !== 'pendiente' && test.estado !== 'enviado' && test.estado !== 'ejecutando') {
       return res.status(400).json({ error: 'Este test ya fue procesado' });
     }
 
@@ -247,6 +257,5 @@ module.exports = {
   solicitarTest,
   consultarTest,
   // Para agente
-  obtenerTestsPendientes,
   reportarResultadoTest,
 };

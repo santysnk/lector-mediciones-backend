@@ -21,6 +21,7 @@ const usuariosController = require('../controllers/usuariosController');
 const adminAgentesController = require('../controllers/adminAgentesController');
 const adminUsuariosController = require('../controllers/adminUsuariosController');
 const testRegistradorController = require('../controllers/testRegistradorController');
+const sseController = require('../controllers/sseController');
 
 // ============================================
 // Rutas de salud/status
@@ -202,8 +203,10 @@ router.post('/agente/lecturas', verificarTokenAgente, agenteApiController.enviar
 router.post('/agente/log', verificarTokenAgente, agenteApiController.enviarLog);
 router.post('/agente/vincular', verificarTokenAgente, agenteApiController.vincular);
 
-// Tests de registrador (el agente consulta y reporta)
-router.get('/agente/tests-pendientes', verificarTokenAgente, testRegistradorController.obtenerTestsPendientes);
+// SSE para recibir comandos en tiempo real
+router.get('/agente/eventos', verificarTokenAgente, sseController.conectarSSE);
+
+// Tests de registrador (el agente reporta resultado)
 router.post('/agente/tests/:testId/resultado', verificarTokenAgente, testRegistradorController.reportarResultadoTest);
 
 module.exports = router;
