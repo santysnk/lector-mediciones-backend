@@ -24,12 +24,18 @@ const obtenerWorkspaces = async (req, res) => {
 
     if (errorAsignaciones) throw errorAsignaciones;
 
+    // DEBUG: Ver qué devuelve la consulta
+    console.log(`[Workspaces] Asignaciones para usuario ${userId}:`, JSON.stringify(asignaciones, null, 2));
+
     // Formatear resultados
-    const workspaces = asignaciones.map(a => ({
-      ...a.workspaces,
-      rol: a.roles?.codigo || 'observador',
-      esCreador: a.workspaces?.creado_por === userId,
-    }));
+    const workspaces = asignaciones.map(a => {
+      console.log(`[Workspaces] Procesando workspace ${a.workspaces?.nombre}: rol_id=${a.rol_id}, roles=${JSON.stringify(a.roles)}`);
+      return {
+        ...a.workspaces,
+        rol: a.roles?.codigo || 'observador',
+        esCreador: a.workspaces?.creado_por === userId,
+      };
+    });
 
     res.json(workspaces);
   } catch (error) {
