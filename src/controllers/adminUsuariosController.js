@@ -242,14 +242,20 @@ async function actualizarAgentesUsuario(req, res) {
         acceso_total: false,
       }));
 
-      const { error: errorInsert } = await supabase
+      console.log(`[AdminUsuarios] Insertando permisos:`, JSON.stringify(registros, null, 2));
+
+      const { data: insertedData, error: errorInsert } = await supabase
         .from('usuario_agentes')
-        .insert(registros);
+        .insert(registros)
+        .select();
 
       if (errorInsert) {
         console.error('Error insertando agentes:', errorInsert);
-        return res.status(500).json({ error: 'Error al guardar permisos' });
+        console.error('Detalles del error:', JSON.stringify(errorInsert, null, 2));
+        return res.status(500).json({ error: 'Error al guardar permisos', detalles: errorInsert.message });
       }
+
+      console.log(`[AdminUsuarios] Permisos insertados:`, JSON.stringify(insertedData, null, 2));
     }
     // Si accesoTotal=false y agentesIds=[], no se insertan permisos (sin acceso)
 
