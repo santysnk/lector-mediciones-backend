@@ -200,15 +200,23 @@ async function actualizarAgentesUsuario(req, res) {
       return res.status(400).json({ error: 'No se puede modificar permisos de un superadmin' });
     }
 
-    // Eliminar permisos existentes del usuario
-    const { error: errorDelete } = await supabase
+    // Eliminar permisos existentes del usuario (si existen)
+    // Primero verificamos si hay permisos existentes
+    const { data: permisosExistentes } = await supabase
       .from('usuario_agentes')
-      .delete()
+      .select('id')
       .eq('usuario_id', usuarioId);
 
-    if (errorDelete) {
-      console.error('Error eliminando permisos:', errorDelete);
-      return res.status(500).json({ error: 'Error al eliminar permisos existentes' });
+    if (permisosExistentes && permisosExistentes.length > 0) {
+      const { error: errorDelete } = await supabase
+        .from('usuario_agentes')
+        .delete()
+        .eq('usuario_id', usuarioId);
+
+      if (errorDelete) {
+        console.error('Error eliminando permisos:', errorDelete);
+        return res.status(500).json({ error: 'Error al eliminar permisos existentes' });
+      }
     }
 
     // Insertar nuevos permisos
