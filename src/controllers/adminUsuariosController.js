@@ -420,9 +420,10 @@ async function obtenerDetallesUsuario(req, res) {
     console.log(`[AdminUsuarios] Permisos recibidos para ${usuarioId}:`, JSON.stringify(permisosRecibidos, null, 2));
 
     // Obtener información de los propietarios de los workspaces
+    // IMPORTANTE: Filtrar para excluir workspaces donde el usuario es propietario (creado_por)
     const workspacesComoInvitado = await Promise.all(
       (permisosRecibidos || [])
-        .filter(p => p.workspaces)
+        .filter(p => p.workspaces && p.workspaces.creado_por !== usuarioId)
         .map(async (p) => {
           // Obtener datos del propietario
           let propietario = null;

@@ -286,18 +286,43 @@ async function rotarClaveAgente(req, res) {
 
 /**
  * GET /api/agentes/disponibles
- * Lista agentes disponibles para vincular (admin+)
+ * Lista agentes disponibles para vincular según permisos del usuario
+ * - Superadmin: ve todos los agentes activos
+ * - Admin/Operador/Observador: solo ve agentes según tabla usuario_agentes
  */
 async function listarAgentesDisponibles(req, res) {
   try {
     const userId = req.user.id;
 
-    if (!await esAdminOSuperior(userId)) {
-      return res.status(403).json({ error: 'Solo admin o superadmin pueden ver agentes disponibles' });
+    // Verificar si es superadmin
+    const esSuperAdmin = await esSuperadmin(userId);
+
+    // Si no es superadmin, obtener permisos de la tabla usuario_agentes
+    let agentesPermitidosIds = null;
+    if (!esSuperAdmin) {
+      const { data: permisos } = await supabase
+        .from('usuario_agentes')
+        .select('agente_id, acceso_total')
+        .eq('usuario_id', userId);
+
+      if (!permisos || permisos.length === 0) {
+        // Sin permisos configurados, no ve ningún agente
+        return res.json([]);
+      }
+
+      // Si tiene acceso total, puede ver todos
+      const tieneAccesoTotal = permisos.some(p => p.acceso_total);
+      if (!tieneAccesoTotal) {
+        // Solo agentes específicos
+        agentesPermitidosIds = permisos.filter(p => p.agente_id).map(p => p.agente_id);
+        if (agentesPermitidosIds.length === 0) {
+          return res.json([]);
+        }
+      }
     }
 
-    // Obtener todos los agentes activos
-    const { data: agentes, error } = await supabase
+    // Construir query base
+    let query = supabase
       .from('agentes')
       .select(`
         id,
@@ -310,6 +335,13 @@ async function listarAgentesDisponibles(req, res) {
       .eq('activo', true)
       .order('nombre', { ascending: true });
 
+    // Filtrar por IDs permitidos si no es superadmin ni tiene acceso total
+    if (agentesPermitidosIds !== null) {
+      query = query.in('id', agentesPermitidosIds);
+    }
+
+    const { data: agentes, error } = await query;
+
     if (error) {
       console.error('Error listando agentes disponibles:', error);
       return res.status(500).json({ error: 'Error obteniendo agentes' });
@@ -317,7 +349,7 @@ async function listarAgentesDisponibles(req, res) {
 
     // Agregar info de conexión
     const ahora = Date.now();
-    const agentesConEstado = agentes.map(a => ({
+    const agentesConEstado = (agentes || []).map(a => ({
       ...a,
       conectado: a.ultimo_heartbeat
         ? (ahora - new Date(a.ultimo_heartbeat).getTime()) < 60000
