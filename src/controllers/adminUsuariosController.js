@@ -393,10 +393,12 @@ async function obtenerDetallesUsuario(req, res) {
       .select(`
         id,
         rol,
-        workspaces:workspace_id (
+        workspace_id,
+        workspaces (
           id,
           nombre,
-          usuarios:usuario_id (
+          usuario_id,
+          usuarios (
             id,
             nombre,
             email
@@ -408,6 +410,8 @@ async function obtenerDetallesUsuario(req, res) {
     if (errorPermisos) {
       console.error('Error obteniendo permisos recibidos:', errorPermisos);
     }
+
+    console.log(`[AdminUsuarios] Permisos recibidos para ${usuarioId}:`, JSON.stringify(permisosRecibidos, null, 2));
 
     const workspacesComoInvitado = (permisosRecibidos || [])
       .filter(p => p.workspaces)
