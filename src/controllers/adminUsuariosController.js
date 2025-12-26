@@ -309,7 +309,7 @@ async function obtenerDetallesUsuario(req, res) {
       return res.status(403).json({ error: 'Se requiere rol superadmin' });
     }
 
-    // 1. Obtener workspaces propios del usuario
+    // 1. Obtener workspaces propios del usuario (creado_por = ID del creador)
     const { data: workspacesPropios, error: errorWs } = await supabase
       .from('workspaces')
       .select(`
@@ -317,7 +317,7 @@ async function obtenerDetallesUsuario(req, res) {
         nombre,
         created_at
       `)
-      .eq('usuario_id', usuarioId)
+      .eq('creado_por', usuarioId)
       .order('created_at', { ascending: true });
 
     if (errorWs) {
