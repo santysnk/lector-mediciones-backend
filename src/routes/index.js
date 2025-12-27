@@ -80,6 +80,7 @@ router.get('/debug/usuario-agentes', async (req, res) => {
 // ============================================
 router.get('/usuarios/perfil', verificarToken, usuariosController.obtenerPerfil);
 router.post('/usuarios/perfil', verificarToken, usuariosController.crearPerfil);
+router.put('/usuarios/workspace-default', verificarToken, usuariosController.actualizarWorkspaceDefault);
 
 // ============================================
 // Rutas de workspaces

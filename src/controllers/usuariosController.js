@@ -89,7 +89,7 @@ const obtenerPerfil = async (req, res) => {
   const userEmail = req.user.email;
 
   try {
-    // Obtener usuario con su rol global
+    // Obtener usuario con su rol global y workspace default
     const { data: usuario, error } = await supabase
       .from('usuarios')
       .select(`
@@ -98,6 +98,7 @@ const obtenerPerfil = async (req, res) => {
         nombre,
         activo,
         rol_id,
+        workspace_default_id,
         roles (
           id,
           codigo,
@@ -172,7 +173,63 @@ const obtenerPerfil = async (req, res) => {
   }
 };
 
+/**
+ * Actualizar el workspace por defecto del usuario
+ * PUT /api/usuarios/workspace-default
+ * Body: { workspaceId: uuid | null }
+ */
+const actualizarWorkspaceDefault = async (req, res) => {
+  const userId = req.user.id;
+  const { workspaceId } = req.body;
+
+  try {
+    // Si se envía un workspaceId, validar que el usuario tiene acceso
+    if (workspaceId) {
+      // Verificar si el usuario es creador del workspace
+      const { data: workspacePropio } = await supabase
+        .from('workspaces')
+        .select('id')
+        .eq('id', workspaceId)
+        .eq('creador_id', userId)
+        .single();
+
+      // Si no es creador, verificar si tiene permiso de acceso
+      if (!workspacePropio) {
+        const { data: permiso } = await supabase
+          .from('usuario_workspaces')
+          .select('id')
+          .eq('workspace_id', workspaceId)
+          .eq('usuario_id', userId)
+          .single();
+
+        if (!permiso) {
+          return res.status(403).json({ error: 'No tienes acceso a este workspace' });
+        }
+      }
+    }
+
+    // Actualizar el workspace default
+    const { data, error } = await supabase
+      .from('usuarios')
+      .update({ workspace_default_id: workspaceId })
+      .eq('id', userId)
+      .select('workspace_default_id')
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      mensaje: workspaceId ? 'Workspace por defecto actualizado' : 'Workspace por defecto eliminado',
+      workspace_default_id: data.workspace_default_id
+    });
+  } catch (error) {
+    console.error('Error actualizando workspace default:', error);
+    res.status(500).json({ error: 'Error al actualizar workspace por defecto' });
+  }
+};
+
 module.exports = {
   crearPerfil,
   obtenerPerfil,
+  actualizarWorkspaceDefault,
 };
