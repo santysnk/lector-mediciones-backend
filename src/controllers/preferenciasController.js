@@ -23,7 +23,8 @@ const obtenerPreferencias = async (req, res) => {
     }
 
     // Si no hay preferencias, devolver objeto vacío
-    res.json(data || { preferencias: {} });
+    const resultado = data || { preferencias: {} };
+    res.json(resultado);
   } catch (error) {
     console.error('Error obteniendo preferencias:', error);
     res.status(500).json({ error: 'Error al obtener preferencias' });
@@ -38,12 +39,6 @@ const guardarPreferencias = async (req, res) => {
   const { workspaceId } = req.params;
   const { preferencias } = req.body;
   const userId = req.user.id;
-
-  console.log('[DEBUG-BACKEND] guardarPreferencias llamado:', {
-    workspaceId,
-    userId,
-    preferencias: JSON.stringify(preferencias, null, 2)
-  });
 
   if (!preferencias || typeof preferencias !== 'object') {
     return res.status(400).json({ error: 'Las preferencias deben ser un objeto' });
@@ -64,10 +59,9 @@ const guardarPreferencias = async (req, res) => {
 
     if (error) throw error;
 
-    console.log('[DEBUG-BACKEND] Preferencias guardadas exitosamente:', JSON.stringify(data, null, 2));
     res.json(data);
   } catch (error) {
-    console.error('[DEBUG-BACKEND] Error guardando preferencias:', error);
+    console.error('Error guardando preferencias:', error);
     res.status(500).json({ error: 'Error al guardar preferencias' });
   }
 };
