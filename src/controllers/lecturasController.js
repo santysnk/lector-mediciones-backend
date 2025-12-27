@@ -42,21 +42,14 @@ async function obtenerAgentesPermitidos(usuarioId) {
 
 /**
  * Helper: Verifica si el usuario tiene acceso a un registrador específico
+ *
+ * El acceso puede ser:
+ * 1. DIRECTO: usuario tiene permisos en usuario_agentes (acceso_total o agente específico)
+ * 2. TRANSITIVO: usuario es invitado a un workspace que tiene vinculado el agente del registrador
+ *    (usuario_workspaces → workspace → workspace_agentes → agente → registrador)
  */
 async function tieneAccesoARegistrador(usuarioId, registradorId) {
-  const agentesPermitidos = await obtenerAgentesPermitidos(usuarioId);
-
-  // Acceso total
-  if (agentesPermitidos === null) {
-    return true;
-  }
-
-  // Sin permisos
-  if (agentesPermitidos.length === 0) {
-    return false;
-  }
-
-  // Verificar si el registrador pertenece a un agente permitido
+  // Primero obtener el agente del registrador (lo necesitamos para ambas verificaciones)
   const { data: registrador } = await supabase
     .from('registradores')
     .select('agente_id')
@@ -67,7 +60,44 @@ async function tieneAccesoARegistrador(usuarioId, registradorId) {
     return false;
   }
 
-  return agentesPermitidos.includes(registrador.agente_id);
+  const agenteId = registrador.agente_id;
+
+  // 1. Verificar acceso DIRECTO (permisos en usuario_agentes)
+  const agentesPermitidos = await obtenerAgentesPermitidos(usuarioId);
+
+  // Acceso total directo
+  if (agentesPermitidos === null) {
+    return true;
+  }
+
+  // Acceso directo a este agente específico
+  if (agentesPermitidos.length > 0 && agentesPermitidos.includes(agenteId)) {
+    return true;
+  }
+
+  // 2. Verificar acceso TRANSITIVO (vía workspace compartido)
+  // El usuario tiene acceso si pertenece a algún workspace que tiene vinculado este agente
+  const { data: accesoTransitivo, error } = await supabase
+    .from('usuario_workspaces')
+    .select(`
+      workspace_id,
+      workspaces!inner (
+        workspace_agentes!inner (
+          agente_id
+        )
+      )
+    `)
+    .eq('usuario_id', usuarioId)
+    .eq('workspaces.workspace_agentes.agente_id', agenteId)
+    .limit(1);
+
+  if (error) {
+    console.error('Error verificando acceso transitivo:', error);
+    return false;
+  }
+
+  // Si encontró al menos un workspace donde el usuario tiene acceso y el agente está vinculado
+  return accesoTransitivo && accesoTransitivo.length > 0;
 }
 
 /**
@@ -226,6 +256,15 @@ async function obtenerLecturasHistoricasPorRegistrador(req, res) {
   try {
     const { registradorId } = req.params;
     const { desde, hasta } = req.query;
+    const usuarioId = req.user?.id;
+
+    // Verificar permisos de acceso al registrador (directo o transitivo vía workspace)
+    if (usuarioId) {
+      const tieneAcceso = await tieneAccesoARegistrador(usuarioId, registradorId);
+      if (!tieneAcceso) {
+        return res.status(403).json({ error: 'No tiene permiso para ver lecturas históricas de este registrador' });
+      }
+    }
 
     if (!desde || !hasta) {
       return res.status(400).json({ error: 'Se requieren parámetros desde y hasta' });
