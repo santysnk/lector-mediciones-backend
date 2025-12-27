@@ -22,6 +22,7 @@ const adminAgentesController = require('../controllers/adminAgentesController');
 const adminUsuariosController = require('../controllers/adminUsuariosController');
 const testRegistradorController = require('../controllers/testRegistradorController');
 const sseController = require('../controllers/sseController');
+const dispositivosController = require('../controllers/dispositivosController');
 
 // ============================================
 // Rutas de salud/status
@@ -134,6 +135,13 @@ router.get('/alimentadores/:alimentadorId/lecturas/historico', verificarToken, l
 router.get('/workspaces/:workspaceId/lecturas/ultima', verificarToken, lecturasController.obtenerUltimaLecturaPorWorkspace);
 router.get('/registradores/:registradorId/lecturas', verificarToken, lecturasController.obtenerUltimasLecturasPorRegistrador);
 router.get('/registradores/:registradorId/lecturas/historico', verificarToken, lecturasController.obtenerLecturasHistoricasPorRegistrador);
+
+// ============================================
+// Rutas de dispositivos (Push Notifications)
+// ============================================
+router.post('/dispositivos/registrar', verificarToken, dispositivosController.registrarDispositivo);
+router.delete('/dispositivos/desregistrar', verificarToken, dispositivosController.desregistrarDispositivo);
+router.get('/dispositivos', verificarToken, dispositivosController.obtenerDispositivos);
 
 // ============================================
 // Rutas de agentes (legacy - mantener por compatibilidad)

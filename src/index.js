@@ -6,6 +6,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
+const { inicializarFirebase, firebaseDisponible } = require('./servicios/notificacionesService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -100,13 +101,22 @@ app.use((err, req, res, next) => {
 // Iniciar servidor
 // ============================================
 
+// ============================================
+// Inicialización de servicios
+// ============================================
+
+// Intentar inicializar Firebase para push notifications
+inicializarFirebase();
+
 app.listen(PORT, () => {
+  const firebaseStatus = firebaseDisponible() ? '✓ Push Notifications activas' : '✗ Push Notifications deshabilitadas';
   console.log(`
 ╔════════════════════════════════════════════╗
 ║   Lector Mediciones Backend                ║
 ║   Servidor corriendo en puerto ${PORT}         ║
 ║   http://localhost:${PORT}                     ║
 ║   API REST para agentes                    ║
+║   ${firebaseStatus.padEnd(36)}║
 ╚════════════════════════════════════════════╝
   `);
 });
