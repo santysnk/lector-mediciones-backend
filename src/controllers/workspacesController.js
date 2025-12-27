@@ -33,6 +33,16 @@ const obtenerWorkspaces = async (req, res) => {
       };
     });
 
+    // Ordenar: primero creador (alfabético), luego invitado (alfabético)
+    workspaces.sort((a, b) => {
+      // Primero ordenar por esCreador (true primero)
+      if (a.esCreador !== b.esCreador) {
+        return a.esCreador ? -1 : 1;
+      }
+      // Luego ordenar alfabéticamente por nombre
+      return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+    });
+
     res.json(workspaces);
   } catch (error) {
     console.error('Error obteniendo workspaces:', error);
