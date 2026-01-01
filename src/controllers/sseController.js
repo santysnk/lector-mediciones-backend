@@ -44,33 +44,24 @@ function conectarSSE(req, res) {
 
   console.log(`[SSE] Agente conectado: ${agenteNombre} (${agenteId.substring(0, 8)}...) - Total: ${agentesConectados.size}`);
 
-  // Keep-alive con comentarios SSE cada 15s (Render cierra conexiones inactivas después de ~5 min)
-  // Usamos comentarios SSE (líneas que empiezan con `:`) que son ignorados por el cliente
-  // pero mantienen la conexión activa a través de proxies como Render
-  const keepAliveInterval = setInterval(() => {
-    if (!res.writableEnded) {
-      res.write(`: keep-alive ${Date.now()}\n\n`);
-    }
-  }, 15000); // Cada 15 segundos
-
-  // Heartbeat con datos cada 30s para que el agente sepa que sigue conectado
+  // Heartbeat con datos reales cada 20s para que el agente sepa que sigue conectado
+  // Nota: Los comentarios SSE (: keep-alive) no funcionan bien con proxies como Render
+  // que hacen buffering, así que usamos eventos reales con datos
   const heartbeatInterval = setInterval(() => {
     if (!res.writableEnded) {
       res.write(`event: heartbeat\n`);
       res.write(`data: ${JSON.stringify({ timestamp: new Date().toISOString() })}\n\n`);
     }
-  }, 30000);
+  }, 20000); // Cada 20 segundos - suficiente para evitar timeout de 60s en agente
 
   // Limpiar al desconectar
   req.on('close', () => {
-    clearInterval(keepAliveInterval);
     clearInterval(heartbeatInterval);
     agentesConectados.delete(agenteId);
     console.log(`[SSE] Agente desconectado: ${agenteNombre} - Total: ${agentesConectados.size}`);
   });
 
   req.on('error', (err) => {
-    clearInterval(keepAliveInterval);
     clearInterval(heartbeatInterval);
     agentesConectados.delete(agenteId);
     console.log(`[SSE] Error en conexión: ${err.message}`);
