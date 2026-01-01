@@ -208,7 +208,7 @@ async function reportarResultadoTest(req, res) {
   try {
     const agenteId = req.agente.id;
     const { testId } = req.params;
-    const { exito, tiempoRespuestaMs, valores, errorMensaje } = req.body;
+    const { exito, tiempoRespuestaMs, valores, coils, errorMensaje } = req.body;
 
     // Verificar que el test pertenece a este agente
     const { data: test, error: errorTest } = await supabase
@@ -226,11 +226,17 @@ async function reportarResultadoTest(req, res) {
       return res.status(400).json({ error: 'Este test ya fue procesado' });
     }
 
+    // Para coils, extraer los valores (0/1) del array de objetos {direccion, valor}
+    let valoresFinales = valores;
+    if (!valoresFinales && coils && Array.isArray(coils)) {
+      valoresFinales = coils.map(c => c.valor);
+    }
+
     // Actualizar con el resultado
     const updateData = {
       estado: exito ? 'completado' : 'error',
       tiempo_respuesta_ms: tiempoRespuestaMs || null,
-      valores: exito ? valores : null,
+      valores: exito ? valoresFinales : null,
       error_mensaje: exito ? null : errorMensaje,
       completado_at: new Date().toISOString(),
     };
