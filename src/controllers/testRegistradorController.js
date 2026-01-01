@@ -308,7 +308,8 @@ async function solicitarTestCoils(req, res) {
     // Registrar el cooldown
     registrarTestRealizado(ip, puertoNum);
 
-    // Crear el test pendiente en DB (reutilizamos la misma tabla pero con tipo_lectura)
+    // Crear el test pendiente en DB (reutilizamos la misma tabla)
+    // Nota: usamos indice_inicial para direccionCoil y cantidad_registros para cantidadBits
     const { data: test, error: errorCrear } = await supabase
       .from('test_registrador')
       .insert({
@@ -316,11 +317,10 @@ async function solicitarTestCoils(req, res) {
         ip,
         puerto: puertoNum,
         unit_id: parseInt(unitId) || 1,
-        indice_inicial: parseInt(direccionCoil), // Usamos indice_inicial para la dirección de coil
-        cantidad_registros: parseInt(cantidadBits), // Usamos cantidad_registros para cantidad de bits
+        indice_inicial: parseInt(direccionCoil),
+        cantidad_registros: parseInt(cantidadBits),
         estado: 'pendiente',
         solicitado_por: userId,
-        tipo_lectura: 'coils', // Campo adicional para distinguir el tipo
       })
       .select()
       .single();
