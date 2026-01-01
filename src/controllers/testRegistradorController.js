@@ -210,9 +210,6 @@ async function reportarResultadoTest(req, res) {
     const { testId } = req.params;
     const { exito, tiempoRespuestaMs, valores, coils, errorMensaje } = req.body;
 
-    // Log del body recibido para debug
-    console.log('[Test] Body recibido:', JSON.stringify(req.body).substring(0, 300));
-
     // Verificar que el test pertenece a este agente
     const { data: test, error: errorTest } = await supabase
       .from('test_registrador')
@@ -253,8 +250,6 @@ async function reportarResultadoTest(req, res) {
       completado_at: new Date().toISOString(),
     };
 
-    console.log('[Test] Guardando resultado:', { testId, updateData: JSON.stringify(updateData).substring(0, 200) });
-
     const { error: errorUpdate } = await supabase
       .from('test_registrador')
       .update(updateData)
@@ -262,7 +257,6 @@ async function reportarResultadoTest(req, res) {
 
     if (errorUpdate) {
       console.error('Error actualizando test:', errorUpdate);
-      console.error('Datos que se intentaron guardar:', JSON.stringify(updateData).substring(0, 500));
       return res.status(500).json({ error: 'Error guardando resultado', detalle: errorUpdate.message });
     }
 
