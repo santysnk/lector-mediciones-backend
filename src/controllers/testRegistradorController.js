@@ -210,6 +210,9 @@ async function reportarResultadoTest(req, res) {
     const { testId } = req.params;
     const { exito, tiempoRespuestaMs, valores, coils, errorMensaje } = req.body;
 
+    // Log del body recibido para debug
+    console.log('[Test] Body recibido:', JSON.stringify(req.body).substring(0, 300));
+
     // Verificar que el test pertenece a este agente
     const { data: test, error: errorTest } = await supabase
       .from('test_registrador')
