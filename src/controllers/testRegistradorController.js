@@ -235,10 +235,19 @@ async function reportarResultadoTest(req, res) {
       valoresFinales = coils.map(c => c.valor);
     }
 
+    // Asegurar que los valores sean enteros (para compatibilidad con integer[])
+    if (valoresFinales && Array.isArray(valoresFinales)) {
+      valoresFinales = valoresFinales.map(v => {
+        const num = parseInt(v, 10);
+        return Number.isNaN(num) ? 0 : num;
+      });
+    }
+
     // Actualizar con el resultado
+    const tiempoMs = tiempoRespuestaMs ? parseInt(tiempoRespuestaMs, 10) : null;
     const updateData = {
       estado: exito ? 'completado' : 'error',
-      tiempo_respuesta_ms: tiempoRespuestaMs || null,
+      tiempo_respuesta_ms: Number.isNaN(tiempoMs) ? null : tiempoMs,
       valores: exito ? valoresFinales : null,
       error_mensaje: exito ? null : errorMensaje,
       completado_at: new Date().toISOString(),
