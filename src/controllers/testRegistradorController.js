@@ -241,6 +241,8 @@ async function reportarResultadoTest(req, res) {
       completado_at: new Date().toISOString(),
     };
 
+    console.log('[Test] Guardando resultado:', { testId, updateData: JSON.stringify(updateData).substring(0, 200) });
+
     const { error: errorUpdate } = await supabase
       .from('test_registrador')
       .update(updateData)
@@ -248,7 +250,8 @@ async function reportarResultadoTest(req, res) {
 
     if (errorUpdate) {
       console.error('Error actualizando test:', errorUpdate);
-      return res.status(500).json({ error: 'Error guardando resultado' });
+      console.error('Datos que se intentaron guardar:', JSON.stringify(updateData).substring(0, 500));
+      return res.status(500).json({ error: 'Error guardando resultado', detalle: errorUpdate.message });
     }
 
     res.json({ mensaje: 'Resultado registrado correctamente' });
