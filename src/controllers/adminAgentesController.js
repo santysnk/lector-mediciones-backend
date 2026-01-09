@@ -650,6 +650,12 @@ async function crearRegistradorAgente(req, res) {
     }
 
     // Crear registrador
+    console.log('[crearRegistradorAgente] Body recibido:', {
+      tipoDispositivo,
+      plantillaId,
+      configuracionRele: configuracionRele ? 'presente' : 'null/undefined'
+    });
+
     const datosRegistrador = {
       agente_id: agenteId,
       nombre,
@@ -666,6 +672,12 @@ async function crearRegistradorAgente(req, res) {
       plantilla_id: plantillaId || null,
       configuracion_completa: configuracionRele || null,
     };
+
+    console.log('[crearRegistradorAgente] Datos a insertar:', {
+      tipo_dispositivo: datosRegistrador.tipo_dispositivo,
+      plantilla_id: datosRegistrador.plantilla_id,
+      configuracion_completa: datosRegistrador.configuracion_completa ? 'presente' : 'null'
+    });
 
     const { data: registrador, error: errorCrear } = await supabase
       .from('registradores')
