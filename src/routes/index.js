@@ -23,6 +23,9 @@ const adminUsuariosController = require('../controllers/adminUsuariosController'
 const testRegistradorController = require('../controllers/testRegistradorController');
 const sseController = require('../controllers/sseController');
 const dispositivosController = require('../controllers/dispositivosController');
+const transformadoresController = require('../controllers/transformadoresController');
+const plantillasDispositivoController = require('../controllers/plantillasDispositivoController');
+const modelosDispositivoController = require('../controllers/modelosDispositivoController');
 
 // ============================================
 // Rutas de salud/status
@@ -218,5 +221,42 @@ router.get('/agente/eventos', verificarTokenAgente, sseController.conectarSSE);
 
 // Tests de registrador (el agente reporta resultado)
 router.post('/agente/tests/:testId/resultado', verificarTokenAgente, testRegistradorController.reportarResultadoTest);
+
+// ============================================
+// Rutas de transformadores (TI/TV)
+// ============================================
+router.get('/workspaces/:workspaceId/transformadores', verificarToken, transformadoresController.obtenerTransformadores);
+router.post('/workspaces/:workspaceId/transformadores', verificarToken, transformadoresController.crearTransformador);
+router.post('/workspaces/:workspaceId/transformadores/migrar', verificarToken, transformadoresController.migrarTransformadores);
+router.put('/transformadores/:id', verificarToken, transformadoresController.actualizarTransformador);
+router.delete('/transformadores/:id', verificarToken, transformadoresController.eliminarTransformador);
+
+// ============================================
+// Rutas de plantillas de dispositivo (Relés y Analizadores)
+// ============================================
+router.get('/workspaces/:workspaceId/plantillas-dispositivo', verificarToken, plantillasDispositivoController.obtenerPlantillas);
+router.post('/workspaces/:workspaceId/plantillas-dispositivo', verificarToken, plantillasDispositivoController.crearPlantilla);
+router.post('/workspaces/:workspaceId/plantillas-dispositivo/migrar', verificarToken, plantillasDispositivoController.migrarPlantillas);
+router.get('/plantillas-dispositivo/:id', verificarToken, plantillasDispositivoController.obtenerPlantilla);
+router.put('/plantillas-dispositivo/:id', verificarToken, plantillasDispositivoController.actualizarPlantilla);
+router.delete('/plantillas-dispositivo/:id', verificarToken, plantillasDispositivoController.eliminarPlantilla);
+
+// ============================================
+// Rutas de modelos de dispositivo (Catálogo - lectura)
+// ============================================
+router.get('/modelos-dispositivo', verificarToken, modelosDispositivoController.obtenerModelos);
+router.get('/modelos-dispositivo/:id', verificarToken, modelosDispositivoController.obtenerModelo);
+
+// ============================================
+// Rutas de configuraciones de protección (Catálogo - lectura)
+// ============================================
+router.get('/configuraciones-proteccion', verificarToken, modelosDispositivoController.obtenerConfiguraciones);
+router.get('/configuraciones-proteccion/:id', verificarToken, modelosDispositivoController.obtenerConfiguracion);
+
+// ============================================
+// Admin: Modelos y configuraciones (solo superadmin)
+// ============================================
+router.post('/admin/modelos-dispositivo', verificarToken, modelosDispositivoController.crearModelo);
+router.post('/admin/configuraciones-proteccion', verificarToken, modelosDispositivoController.crearConfiguracion);
 
 module.exports = router;
