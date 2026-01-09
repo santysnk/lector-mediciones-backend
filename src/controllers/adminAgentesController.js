@@ -624,7 +624,10 @@ async function crearRegistradorAgente(req, res) {
   try {
     const userId = req.user.id;
     const { agenteId } = req.params;
-    const { nombre, tipo, ip, puerto, unitId, indiceInicial, cantidadRegistros, intervaloSegundos, alimentadorId } = req.body;
+    const {
+      nombre, tipo, ip, puerto, unitId, indiceInicial, cantidadRegistros,
+      intervaloSegundos, alimentadorId, tipoDispositivo, plantillaId, configuracionRele
+    } = req.body;
 
     if (!await esSuperadmin(userId)) {
       return res.status(403).json({ error: 'Solo superadmin puede crear registradores' });
@@ -647,21 +650,26 @@ async function crearRegistradorAgente(req, res) {
     }
 
     // Crear registrador
+    const datosRegistrador = {
+      agente_id: agenteId,
+      nombre,
+      tipo: tipo || 'modbus',
+      ip,
+      puerto: parseInt(puerto),
+      unit_id: parseInt(unitId) || 1,
+      indice_inicial: parseInt(indiceInicial),
+      cantidad_registros: parseInt(cantidadRegistros),
+      intervalo_segundos: parseInt(intervaloSegundos) || 60,
+      alimentador_id: alimentadorId || null,
+      activo: false,
+      tipo_dispositivo: tipoDispositivo || null,
+      plantilla_id: plantillaId || null,
+      configuracion_completa: configuracionRele || null,
+    };
+
     const { data: registrador, error: errorCrear } = await supabase
       .from('registradores')
-      .insert({
-        agente_id: agenteId,
-        nombre,
-        tipo: tipo || 'modbus',
-        ip,
-        puerto: parseInt(puerto),
-        unit_id: parseInt(unitId) || 1,
-        indice_inicial: parseInt(indiceInicial),
-        cantidad_registros: parseInt(cantidadRegistros),
-        intervalo_segundos: parseInt(intervaloSegundos) || 60,
-        alimentador_id: alimentadorId || null,
-        activo: false,
-      })
+      .insert(datosRegistrador)
       .select()
       .single();
 
@@ -688,7 +696,10 @@ async function actualizarRegistradorAgente(req, res) {
   try {
     const userId = req.user.id;
     const { agenteId, registradorId } = req.params;
-    const { nombre, tipo, ip, puerto, unitId, indiceInicial, cantidadRegistros, intervaloSegundos, activo, alimentadorId } = req.body;
+    const {
+      nombre, tipo, ip, puerto, unitId, indiceInicial, cantidadRegistros,
+      intervaloSegundos, activo, alimentadorId, tipoDispositivo, plantillaId, configuracionRele
+    } = req.body;
 
     if (!await esSuperadmin(userId)) {
       return res.status(403).json({ error: 'Solo superadmin puede editar registradores' });
@@ -718,6 +729,9 @@ async function actualizarRegistradorAgente(req, res) {
     if (intervaloSegundos !== undefined) updateData.intervalo_segundos = parseInt(intervaloSegundos);
     if (activo !== undefined) updateData.activo = activo;
     if (alimentadorId !== undefined) updateData.alimentador_id = alimentadorId || null;
+    if (tipoDispositivo !== undefined) updateData.tipo_dispositivo = tipoDispositivo;
+    if (plantillaId !== undefined) updateData.plantilla_id = plantillaId || null;
+    if (configuracionRele !== undefined) updateData.configuracion_completa = configuracionRele;
 
     const { data: registrador, error: errorActualizar } = await supabase
       .from('registradores')
