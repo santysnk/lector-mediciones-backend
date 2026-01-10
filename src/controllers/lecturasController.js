@@ -10,7 +10,10 @@ const supabase = require('../config/supabase');
  * @returns {[]} array vacío si no tiene permisos configurados
  */
 async function obtenerAgentesPermitidos(usuarioId) {
+  console.log('[Permisos v2] Verificando usuario:', usuarioId);
+
   if (!usuarioId) {
+    console.log('[Permisos v2] usuarioId vacío');
     return [];
   }
 
@@ -21,13 +24,19 @@ async function obtenerAgentesPermitidos(usuarioId) {
     .eq('id', usuarioId)
     .single();
 
+  console.log('[Permisos v2] Usuario:', usuario, 'Error:', errorUsuario);
+
   if (errorUsuario || !usuario) {
+    console.log('[Permisos v2] Error o usuario no encontrado');
     return [];
   }
 
   if (usuario?.roles?.codigo === 'superadmin') {
+    console.log('[Permisos v2] Es superadmin, acceso total');
     return null; // Acceso total
   }
+
+  console.log('[Permisos v2] No es superadmin, rol:', usuario?.roles?.codigo);
 
   // Obtener permisos de agentes del usuario
   const { data: permisos } = await supabase
