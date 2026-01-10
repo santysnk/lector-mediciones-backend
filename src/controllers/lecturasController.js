@@ -66,24 +66,32 @@ async function obtenerAgentesPermitidos(usuarioId) {
  *    (usuario_workspaces → workspace → workspace_agentes → agente → registrador)
  */
 async function tieneAccesoARegistrador(usuarioId, registradorId) {
+  console.log('[tieneAcceso] Verificando usuario:', usuarioId, 'registrador:', registradorId);
+
   // Primero obtener el agente del registrador (lo necesitamos para ambas verificaciones)
-  const { data: registrador } = await supabase
+  const { data: registrador, error: errReg } = await supabase
     .from('registradores')
     .select('agente_id')
     .eq('id', registradorId)
     .single();
 
+  console.log('[tieneAcceso] Registrador:', registrador, 'error:', errReg);
+
   if (!registrador) {
+    console.log('[tieneAcceso] Registrador no encontrado, return false');
     return false;
   }
 
   const agenteId = registrador.agente_id;
+  console.log('[tieneAcceso] agenteId:', agenteId);
 
   // 1. Verificar acceso DIRECTO (permisos en usuario_agentes)
   const agentesPermitidos = await obtenerAgentesPermitidos(usuarioId);
+  console.log('[tieneAcceso] agentesPermitidos:', agentesPermitidos);
 
   // Acceso total directo
   if (agentesPermitidos === null) {
+    console.log('[tieneAcceso] Acceso total, return true');
     return true;
   }
 
@@ -360,12 +368,18 @@ async function obtenerUltimasLecturasPorRegistrador(req, res) {
     const { limite = 1 } = req.query;
     const usuarioId = req.user?.id;
 
+    console.log('[Lecturas] Petición para registrador:', registradorId, 'usuarioId:', usuarioId);
+
     // Verificar permisos de acceso al registrador
     if (usuarioId) {
       const tieneAcceso = await tieneAccesoARegistrador(usuarioId, registradorId);
+      console.log('[Lecturas] tieneAcceso:', tieneAcceso);
       if (!tieneAcceso) {
+        console.log('[Lecturas] DENEGADO - devolviendo 403');
         return res.status(403).json({ error: 'No tiene permiso para ver lecturas de este registrador' });
       }
+    } else {
+      console.log('[Lecturas] Sin usuarioId, saltando verificación');
     }
 
     // Primero obtener el indice_inicial del registrador
