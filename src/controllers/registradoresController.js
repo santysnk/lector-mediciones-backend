@@ -491,12 +491,6 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
     funcionalidadesDisponibles.sort((a, b) => a.orden - b.orden);
 
     // 6. Extraer etiquetas de bits (prioridad: configuracion_completa > plantilla)
-    console.log('[DEBUG obtenerFuncionalidadesRegistrador]', {
-      registradorId: id,
-      plantillaNombre: plantilla.nombre,
-      configCompleta_etiquetasBits: configCompleta.etiquetasBits,
-      plantilla_etiquetas_bits: plantilla.etiquetas_bits,
-    });
     const etiquetasBits = configCompleta.etiquetasBits || plantilla.etiquetas_bits || null;
 
     // 7. Responder
