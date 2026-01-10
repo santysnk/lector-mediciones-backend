@@ -476,6 +476,7 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
             id: funcId,
             nombre: funcActiva.nombre || func.nombre,
             categoria: func.categoria || 'general',
+            orden: funcActiva.orden ?? func.orden ?? Infinity,
             registros: (funcActiva.registros || func.registros || []).map(reg => ({
               etiqueta: reg.etiqueta,
               registro: reg.valor,
@@ -485,6 +486,9 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
         }
       }
     }
+
+    // Ordenar por el campo 'orden' para preservar el orden configurado por el usuario
+    funcionalidadesDisponibles.sort((a, b) => a.orden - b.orden);
 
     // 6. Responder
     res.json({
