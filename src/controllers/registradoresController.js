@@ -439,10 +439,10 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
       });
     }
 
-    // 3. Obtener la plantilla
+    // 3. Obtener la plantilla (incluyendo etiquetas_bits)
     const { data: plantilla, error: errorPlantilla } = await supabase
       .from('plantillas_dispositivo')
-      .select('id, nombre, tipo_dispositivo, funcionalidades')
+      .select('id, nombre, tipo_dispositivo, funcionalidades, etiquetas_bits')
       .eq('id', registrador.plantilla_id)
       .single();
 
@@ -490,8 +490,8 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
     // Ordenar por el campo 'orden' para preservar el orden configurado por el usuario
     funcionalidadesDisponibles.sort((a, b) => a.orden - b.orden);
 
-    // 6. Extraer etiquetas de bits de configuracion_completa
-    const etiquetasBits = configCompleta.etiquetasBits || null;
+    // 6. Extraer etiquetas de bits (prioridad: configuracion_completa > plantilla)
+    const etiquetasBits = configCompleta.etiquetasBits || plantilla.etiquetas_bits || null;
 
     // 7. Responder
     res.json({
