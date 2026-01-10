@@ -490,7 +490,10 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
     // Ordenar por el campo 'orden' para preservar el orden configurado por el usuario
     funcionalidadesDisponibles.sort((a, b) => a.orden - b.orden);
 
-    // 6. Responder
+    // 6. Extraer etiquetas de bits de configuracion_completa
+    const etiquetasBits = configCompleta.etiquetasBits || null;
+
+    // 7. Responder
     res.json({
       registrador: {
         id: registrador.id,
@@ -503,7 +506,8 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
         nombre: plantilla.nombre,
         tipo: plantilla.tipo_dispositivo
       },
-      funcionalidades: funcionalidadesDisponibles
+      funcionalidades: funcionalidadesDisponibles,
+      etiquetasBits: etiquetasBits
     });
 
   } catch (error) {
