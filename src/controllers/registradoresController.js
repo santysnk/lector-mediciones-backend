@@ -395,10 +395,127 @@ async function toggleActivo(req, res) {
   }
 }
 
+/**
+ * GET /api/registradores/:id/funcionalidades
+ * Obtiene las funcionalidades disponibles de un registrador basándose en su plantilla
+ */
+async function obtenerFuncionalidadesRegistrador(req, res) {
+  const { id } = req.params;
+
+  try {
+    // 1. Obtener registrador con su configuración
+    const { data: registrador, error: errorReg } = await supabase
+      .from('registradores')
+      .select(`
+        id,
+        nombre,
+        ip,
+        puerto,
+        plantilla_id,
+        configuracion_completa
+      `)
+      .eq('id', id)
+      .single();
+
+    if (errorReg || !registrador) {
+      return res.status(404).json({
+        error: 'Registrador no encontrado',
+        details: errorReg?.message
+      });
+    }
+
+    // 2. Verificar que tiene plantilla
+    if (!registrador.plantilla_id) {
+      return res.json({
+        registrador: {
+          id: registrador.id,
+          nombre: registrador.nombre,
+          ip: registrador.ip,
+          puerto: registrador.puerto
+        },
+        plantilla: null,
+        funcionalidades: [],
+        mensaje: 'El registrador no tiene plantilla configurada'
+      });
+    }
+
+    // 3. Obtener la plantilla
+    const { data: plantilla, error: errorPlantilla } = await supabase
+      .from('plantillas_dispositivo')
+      .select('id, nombre, tipo_dispositivo, funcionalidades')
+      .eq('id', registrador.plantilla_id)
+      .single();
+
+    if (errorPlantilla || !plantilla) {
+      return res.json({
+        registrador: {
+          id: registrador.id,
+          nombre: registrador.nombre,
+          ip: registrador.ip,
+          puerto: registrador.puerto
+        },
+        plantilla: null,
+        funcionalidades: [],
+        mensaje: 'La plantilla asociada no existe'
+      });
+    }
+
+    // 4. Obtener funcionalidades activas desde configuracion_completa
+    const configCompleta = registrador.configuracion_completa || {};
+    const funcionalidadesActivas = configCompleta.funcionalidadesActivas || {};
+
+    // 5. Filtrar y formatear funcionalidades habilitadas
+    const funcionalidadesDisponibles = [];
+
+    if (plantilla.funcionalidades) {
+      for (const [funcId, func] of Object.entries(plantilla.funcionalidades)) {
+        // Solo incluir si está activa en la configuración del registrador
+        const funcActiva = funcionalidadesActivas[funcId];
+        if (funcActiva && funcActiva.habilitado) {
+          funcionalidadesDisponibles.push({
+            id: funcId,
+            nombre: funcActiva.nombre || func.nombre,
+            categoria: func.categoria || 'general',
+            registros: (funcActiva.registros || func.registros || []).map(reg => ({
+              etiqueta: reg.etiqueta,
+              registro: reg.valor,
+              transformadorId: reg.transformadorId || null
+            }))
+          });
+        }
+      }
+    }
+
+    // 6. Responder
+    res.json({
+      registrador: {
+        id: registrador.id,
+        nombre: registrador.nombre,
+        ip: registrador.ip,
+        puerto: registrador.puerto
+      },
+      plantilla: {
+        id: plantilla.id,
+        nombre: plantilla.nombre,
+        tipo: plantilla.tipo_dispositivo
+      },
+      funcionalidades: funcionalidadesDisponibles
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo funcionalidades:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      details: error.message
+    });
+  }
+}
+
 module.exports = {
   obtenerRegistradores,
   crearRegistrador,
   actualizarRegistrador,
   eliminarRegistrador,
   toggleActivo,
+  obtenerFuncionalidadesRegistrador,
 };

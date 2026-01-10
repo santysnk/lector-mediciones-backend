@@ -201,6 +201,7 @@ router.post('/registradores', verificarToken, registradoresController.crearRegis
 router.put('/registradores/:id', verificarToken, registradoresController.actualizarRegistrador);
 router.delete('/registradores/:id', verificarToken, registradoresController.eliminarRegistrador);
 router.post('/registradores/:id/toggle-activo', verificarToken, registradoresController.toggleActivo);
+router.get('/registradores/:id/funcionalidades', verificarToken, registradoresController.obtenerFuncionalidadesRegistrador);
 
 // ============================================
 // Rutas REST para agentes
