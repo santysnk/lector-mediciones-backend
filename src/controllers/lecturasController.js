@@ -10,14 +10,36 @@ const supabase = require('../config/supabase');
  * @returns {[]} array vacío si no tiene permisos configurados
  */
 async function obtenerAgentesPermitidos(usuarioId) {
+  console.log('[Permisos] Verificando permisos para usuario:', usuarioId);
+
+  if (!usuarioId) {
+    console.log('[Permisos] ERROR: usuarioId es undefined o null');
+    return [];
+  }
+
   // Primero verificar si es superadmin (tiene acceso a todo)
-  const { data: usuario } = await supabase
+  const { data: usuario, error: errorUsuario } = await supabase
     .from('usuarios')
-    .select('roles(codigo)')
+    .select('rol_id, roles (codigo)')
     .eq('id', usuarioId)
     .single();
 
+  console.log('[Permisos] Resultado consulta usuario:', JSON.stringify({ usuario, errorUsuario }, null, 2));
+
+  if (errorUsuario) {
+    console.log('[Permisos] Error buscando usuario en BD:', errorUsuario.message);
+    return [];
+  }
+
+  if (!usuario) {
+    console.log('[Permisos] Usuario no encontrado en tabla usuarios');
+    return [];
+  }
+
+  console.log('[Permisos] Usuario encontrado - rol_id:', usuario.rol_id, 'roles:', usuario.roles);
+
   if (usuario?.roles?.codigo === 'superadmin') {
+    console.log('[Permisos] Usuario es superadmin, acceso total');
     return null; // Acceso total
   }
 
@@ -49,24 +71,32 @@ async function obtenerAgentesPermitidos(usuarioId) {
  *    (usuario_workspaces → workspace → workspace_agentes → agente → registrador)
  */
 async function tieneAccesoARegistrador(usuarioId, registradorId) {
+  console.log('[tieneAccesoARegistrador] Verificando acceso - usuarioId:', usuarioId, 'registradorId:', registradorId);
+
   // Primero obtener el agente del registrador (lo necesitamos para ambas verificaciones)
-  const { data: registrador } = await supabase
+  const { data: registrador, error: errorReg } = await supabase
     .from('registradores')
     .select('agente_id')
     .eq('id', registradorId)
     .single();
 
+  console.log('[tieneAccesoARegistrador] Registrador encontrado:', registrador, 'error:', errorReg);
+
   if (!registrador) {
+    console.log('[tieneAccesoARegistrador] Registrador no encontrado, denegando acceso');
     return false;
   }
 
   const agenteId = registrador.agente_id;
+  console.log('[tieneAccesoARegistrador] Agente del registrador:', agenteId);
 
   // 1. Verificar acceso DIRECTO (permisos en usuario_agentes)
   const agentesPermitidos = await obtenerAgentesPermitidos(usuarioId);
+  console.log('[tieneAccesoARegistrador] Agentes permitidos:', agentesPermitidos);
 
   // Acceso total directo
   if (agentesPermitidos === null) {
+    console.log('[tieneAccesoARegistrador] Usuario tiene acceso total (superadmin o acceso_total)');
     return true;
   }
 
@@ -343,12 +373,19 @@ async function obtenerUltimasLecturasPorRegistrador(req, res) {
     const { limite = 1 } = req.query;
     const usuarioId = req.user?.id;
 
+    console.log('[Lecturas] obtenerUltimasLecturasPorRegistrador - registradorId:', registradorId, 'usuarioId:', usuarioId);
+    console.log('[Lecturas] req.user completo:', JSON.stringify(req.user, null, 2));
+
     // Verificar permisos de acceso al registrador
     if (usuarioId) {
       const tieneAcceso = await tieneAccesoARegistrador(usuarioId, registradorId);
+      console.log('[Lecturas] Resultado tieneAcceso:', tieneAcceso);
       if (!tieneAcceso) {
+        console.log('[Lecturas] DENEGADO - Usuario no tiene acceso al registrador');
         return res.status(403).json({ error: 'No tiene permiso para ver lecturas de este registrador' });
       }
+    } else {
+      console.log('[Lecturas] WARNING: usuarioId es undefined, saltando verificación de permisos');
     }
 
     // Primero obtener el indice_inicial del registrador
