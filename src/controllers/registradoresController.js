@@ -481,7 +481,9 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
               etiqueta: reg.etiqueta,
               registro: reg.valor,
               transformadorId: reg.transformadorId || null
-            }))
+            })),
+            // Incluir configHistorial para configuración de visualización en historial
+            configHistorial: funcActiva.configHistorial || func.configHistorial || null
           });
         }
       }
