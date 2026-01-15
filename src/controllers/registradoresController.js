@@ -483,7 +483,9 @@ async function obtenerFuncionalidadesRegistrador(req, res) {
               transformadorId: reg.transformadorId || null
             })),
             // Incluir configHistorial para configuración de visualización en historial
-            configHistorial: funcActiva.configHistorial || func.configHistorial || null
+            configHistorial: funcActiva.configHistorial || func.configHistorial || null,
+            // Incluir etiquetasBits específicas de esta funcionalidad (para estados/alarmas)
+            etiquetasBits: funcActiva.etiquetasBits || func.etiquetasBits || null
           });
         }
       }
