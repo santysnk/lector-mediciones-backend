@@ -6,6 +6,7 @@ const router = express.Router();
 
 const { verificarToken } = require('../middleware/auth');
 const { verificarTokenAgente } = require('../middleware/authAgente');
+const { rateLimitAuth, rateLimitAgente, rateLimitPing } = require('../middleware/rateLimiter');
 
 // Importar controladores
 const workspacesController = require('../controllers/workspacesController');
@@ -207,14 +208,14 @@ router.get('/registradores/:id/funcionalidades', verificarToken, registradoresCo
 // Rutas REST para agentes
 // ============================================
 // Sin autenticación
-router.get('/agente/ping', agenteApiController.ping);
-router.post('/agente/auth', agenteApiController.autenticar);
+router.get('/agente/ping', rateLimitPing, agenteApiController.ping);
+router.post('/agente/auth', rateLimitAuth, agenteApiController.autenticar);
 
 // Con autenticación JWT del agente
-router.post('/agente/heartbeat', verificarTokenAgente, agenteApiController.heartbeat);
-router.get('/agente/config', verificarTokenAgente, agenteApiController.obtenerConfiguracion);
-router.post('/agente/lecturas', verificarTokenAgente, agenteApiController.enviarLecturas);
-router.post('/agente/log', verificarTokenAgente, agenteApiController.enviarLog);
+router.post('/agente/heartbeat', verificarTokenAgente, rateLimitAgente, agenteApiController.heartbeat);
+router.get('/agente/config', verificarTokenAgente, rateLimitAgente, agenteApiController.obtenerConfiguracion);
+router.post('/agente/lecturas', verificarTokenAgente, rateLimitAgente, agenteApiController.enviarLecturas);
+router.post('/agente/log', verificarTokenAgente, rateLimitAgente, agenteApiController.enviarLog);
 router.post('/agente/vincular', verificarTokenAgente, agenteApiController.vincular);
 
 // SSE para recibir comandos en tiempo real
