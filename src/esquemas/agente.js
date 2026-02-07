@@ -12,7 +12,7 @@ const esquemaHeartbeat = z.object({
 const esquemaLectura = z.object({
   registradorId: z.string().uuid('registradorId debe ser un UUID válido'),
   timestamp: z.string().max(100).optional(),
-  valores: z.record(z.unknown()),
+  valores: z.array(z.number()),
   tiempoMs: z.number().int().min(0).optional(),
   exito: z.boolean().optional(),
   error: z.string().max(1000).optional(),
