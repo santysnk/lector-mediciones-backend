@@ -15,7 +15,7 @@ function validar(esquema) {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const errores = error.errors.map((e) => ({
+        const errores = (error.issues || []).map((e) => ({
           campo: e.path.join('.'),
           mensaje: e.message,
         }));
