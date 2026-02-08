@@ -15,8 +15,8 @@ const esquemaActualizarPuesto = z.object({
   orden: z.number().int().min(0).optional(),
   color: z.string().trim().max(20).optional(),
   bg_color: z.string().trim().max(20).optional(),
-  gaps_verticales: z.number().min(0).optional(),
-  escala: z.number().min(0.1).max(10).optional(),
+  gaps_verticales: z.record(z.string(), z.number().min(0)).optional(),
+  escala: z.number().min(0.1).max(10).nullable().optional(),
 });
 
 const esquemaReordenarPuestos = z.object({
