@@ -7,7 +7,7 @@ const esquemaCrearAlimentador = z.object({
   orden: z.number().int().min(0).optional(),
   registrador_id: z.string().uuid().optional(),
   intervalo_consulta_ms: z.number().int().min(1000).max(60000).optional(),
-  card_design: z.record(z.unknown()).optional(),
+  card_design: z.record(z.string(), z.unknown()).optional(),
   gap_horizontal: z.number().min(0).optional(),
 });
 
@@ -17,10 +17,10 @@ const esquemaActualizarAlimentador = z.object({
   orden: z.number().int().min(0).optional(),
   registrador_id: z.string().uuid().nullable().optional(),
   intervalo_consulta_ms: z.number().int().min(1000).max(60000).optional(),
-  card_design: z.record(z.unknown()).optional(),
+  card_design: z.record(z.string(), z.unknown()).optional(),
   gap_horizontal: z.number().min(0).optional(),
   escala: z.number().min(0.1).max(10).optional(),
-  config_tarjeta: z.record(z.unknown()).optional(),
+  config_tarjeta: z.record(z.string(), z.unknown()).optional(),
 });
 
 const esquemaReordenarAlimentadores = z.object({

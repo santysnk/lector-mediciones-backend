@@ -1,8 +1,6 @@
 // src/middleware/validar.js
 // Middleware genérico de validación con Zod
 
-const { ZodError } = require('zod');
-
 /**
  * Crea un middleware que valida req.body contra un esquema Zod
  * @param {import('zod').ZodSchema} esquema - Esquema Zod a validar
@@ -14,9 +12,11 @@ function validar(esquema) {
       req.body = esquema.parse(req.body);
       next();
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errores = (error.issues || []).map((e) => ({
-          campo: e.path.join('.'),
+      // Detectar errores de validación Zod por la presencia de .issues
+      // (compatible con Zod v3 y v4, donde la clase de error cambió)
+      if (error && Array.isArray(error.issues)) {
+        const errores = error.issues.map((e) => ({
+          campo: (e.path || []).join('.'),
           mensaje: e.message,
         }));
         return res.status(400).json({

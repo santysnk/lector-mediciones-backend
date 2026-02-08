@@ -11,7 +11,7 @@ const esquemaCrearModelo = z.object({
   familia: z.string().trim().max(100).optional(),
   descripcion: z.string().trim().max(500).optional(),
   icono: z.string().trim().max(100).optional(),
-  capacidades: z.record(z.unknown()).optional(),
+  capacidades: z.record(z.string(), z.unknown()).optional(),
 });
 
 const esquemaCrearConfiguracion = z.object({
@@ -19,8 +19,8 @@ const esquemaCrearConfiguracion = z.object({
   modelo_id: z.string().trim().min(1, 'El modelo_id es requerido'),
   nombre: z.string().trim().min(1, 'El nombre es requerido').max(100),
   descripcion: z.string().trim().max(500).optional(),
-  capacidades: z.record(z.unknown()).optional(),
-  protecciones: z.array(z.record(z.unknown())).optional(),
+  capacidades: z.record(z.string(), z.unknown()).optional(),
+  protecciones: z.array(z.record(z.string(), z.unknown())).optional(),
 });
 
 module.exports = {

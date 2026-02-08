@@ -25,7 +25,7 @@ const esquemaLecturas = z.object({
 const esquemaLog = z.object({
   nivel: z.string().trim().max(20).optional(),
   mensaje: z.string().trim().min(1, 'El mensaje es requerido').max(5000),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const esquemaVincular = z.object({

@@ -30,7 +30,7 @@ const esquemaCrearRegistradorAgente = z.object({
   alimentadorId: z.string().uuid().nullable().optional(),
   tipoDispositivo: z.string().trim().max(50).optional(),
   plantillaId: z.string().uuid().nullable().optional(),
-  configuracionRele: z.record(z.unknown()).optional(),
+  configuracionRele: z.record(z.string(), z.unknown()).optional(),
 });
 
 const esquemaActualizarRegistradorAgente = z.object({
@@ -46,7 +46,7 @@ const esquemaActualizarRegistradorAgente = z.object({
   alimentadorId: z.string().uuid().nullable().optional(),
   tipoDispositivo: z.string().trim().max(50).optional(),
   plantillaId: z.string().uuid().nullable().optional(),
-  configuracionRele: z.record(z.unknown()).optional(),
+  configuracionRele: z.record(z.string(), z.unknown()).optional(),
 });
 
 module.exports = {

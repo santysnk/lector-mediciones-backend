@@ -153,14 +153,13 @@ const crearAlimentador = async (req, res) => {
  * Actualizar un alimentador
  */
 const actualizarAlimentador = async (req, res) => {
-  const { id } = req.params;
-  const {
-    nombre, color, orden, registrador_id, intervalo_consulta_ms,
-    card_design, gap_horizontal, escala, config_tarjeta
-  } = req.body;
-  const userId = req.user.id;
-
   try {
+    const { id } = req.params;
+    const {
+      nombre, color, orden, registrador_id, intervalo_consulta_ms,
+      card_design, gap_horizontal, escala, config_tarjeta
+    } = req.body;
+    const userId = req.user.id;
     // SEGURIDAD: Verificar acceso al workspace del alimentador
     const workspaceId = await obtenerWorkspaceIdDeAlimentador(id);
     if (!workspaceId) {
