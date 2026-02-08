@@ -92,7 +92,7 @@ const obtenerAlimentadores = async (req, res) => {
  */
 const crearAlimentador = async (req, res) => {
   const { puestoId } = req.params;
-  const { nombre, color, orden, registrador_id, intervalo_consulta_ms, card_design, gap_horizontal } = req.body;
+  const { nombre, color, orden, registrador_id, intervalo_consulta_ms, card_design, gap_horizontal, config_tarjeta } = req.body;
   const userId = req.user.id;
 
   if (!nombre || nombre.trim() === '') {
@@ -136,6 +136,7 @@ const crearAlimentador = async (req, res) => {
         intervalo_consulta_ms: intervalo_consulta_ms || 60000,
         card_design: card_design || {},
         gap_horizontal: gap_horizontal || 0,
+        config_tarjeta: config_tarjeta || null,
       })
       .select()
       .single();

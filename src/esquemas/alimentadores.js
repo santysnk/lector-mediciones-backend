@@ -5,10 +5,11 @@ const esquemaCrearAlimentador = z.object({
   nombre: z.string().trim().min(1, 'El nombre es requerido').max(100),
   color: z.string().trim().max(20).optional(),
   orden: z.number().int().min(0).optional(),
-  registrador_id: z.string().uuid().optional(),
+  registrador_id: z.string().uuid().nullable().optional(),
   intervalo_consulta_ms: z.number().int().min(1000).max(60000).optional(),
   card_design: z.record(z.string(), z.unknown()).optional(),
   gap_horizontal: z.number().min(0).optional(),
+  config_tarjeta: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 const esquemaActualizarAlimentador = z.object({
