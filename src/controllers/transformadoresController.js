@@ -287,32 +287,55 @@ async function migrarTransformadores(req, res) {
 
 /**
  * GET /api/transformadores
- * Obtiene TODOS los transformadores (solo superadmin).
- * Usado desde Panel SuperAdmin donde el contexto no es un workspace específico.
+ * Obtiene transformadores accesibles para el usuario autenticado.
+ * - Superadmin: devuelve TODOS los transformadores del sistema
+ * - Otros roles: devuelve transformadores de todos los workspaces a los que pertenece
  */
 async function obtenerTodosTransformadores(req, res) {
   try {
     const usuarioId = req.user.id;
 
-    // Solo superadmins pueden listar todos los transformadores
+    // Verificar si es superadmin
     const { data: usuario } = await supabase
       .from('usuarios')
       .select('rol_id, roles (codigo)')
       .eq('id', usuarioId)
       .single();
 
-    if (usuario?.roles?.codigo !== 'superadmin') {
-      return res.status(403).json({ error: 'Solo superadmins pueden acceder a todos los transformadores' });
+    let query;
+
+    if (usuario?.roles?.codigo === 'superadmin') {
+      // Superadmin: todos los transformadores
+      query = supabase
+        .from('transformadores')
+        .select('*')
+        .order('tipo', { ascending: true })
+        .order('nombre', { ascending: true });
+    } else {
+      // Otros: transformadores de sus workspaces
+      const { data: memberships } = await supabase
+        .from('usuario_workspaces')
+        .select('workspace_id')
+        .eq('usuario_id', usuarioId);
+
+      const workspaceIds = (memberships || []).map(m => m.workspace_id);
+
+      if (workspaceIds.length === 0) {
+        return res.json({ transformadores: [] });
+      }
+
+      query = supabase
+        .from('transformadores')
+        .select('*')
+        .in('workspace_id', workspaceIds)
+        .order('tipo', { ascending: true })
+        .order('nombre', { ascending: true });
     }
 
-    const { data, error } = await supabase
-      .from('transformadores')
-      .select('*')
-      .order('tipo', { ascending: true })
-      .order('nombre', { ascending: true });
+    const { data, error } = await query;
 
     if (error) {
-      console.error('Error obteniendo todos los transformadores:', error);
+      console.error('Error obteniendo transformadores:', error);
       return res.status(500).json({ error: 'Error obteniendo transformadores' });
     }
 
