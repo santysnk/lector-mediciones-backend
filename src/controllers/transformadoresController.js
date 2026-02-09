@@ -285,8 +285,48 @@ async function migrarTransformadores(req, res) {
   }
 }
 
+/**
+ * GET /api/transformadores
+ * Obtiene TODOS los transformadores (solo superadmin).
+ * Usado desde Panel SuperAdmin donde el contexto no es un workspace específico.
+ */
+async function obtenerTodosTransformadores(req, res) {
+  try {
+    const usuarioId = req.user.id;
+
+    // Solo superadmins pueden listar todos los transformadores
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('rol_id, roles (codigo)')
+      .eq('id', usuarioId)
+      .single();
+
+    if (usuario?.roles?.codigo !== 'superadmin') {
+      return res.status(403).json({ error: 'Solo superadmins pueden acceder a todos los transformadores' });
+    }
+
+    const { data, error } = await supabase
+      .from('transformadores')
+      .select('*')
+      .order('tipo', { ascending: true })
+      .order('nombre', { ascending: true });
+
+    if (error) {
+      console.error('Error obteniendo todos los transformadores:', error);
+      return res.status(500).json({ error: 'Error obteniendo transformadores' });
+    }
+
+    res.json({ transformadores: data || [] });
+
+  } catch (err) {
+    console.error('Error en obtenerTodosTransformadores:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
 module.exports = {
   obtenerTransformadores,
+  obtenerTodosTransformadores,
   crearTransformador,
   actualizarTransformador,
   eliminarTransformador,

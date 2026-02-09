@@ -249,6 +249,7 @@ router.post('/agente/tests/:testId/resultado', verificarTokenAgente, validar(esq
 router.get('/workspaces/:workspaceId/transformadores', verificarToken, transformadoresController.obtenerTransformadores);
 router.post('/workspaces/:workspaceId/transformadores', verificarToken, validar(esquemaCrearTransformador), transformadoresController.crearTransformador);
 router.post('/workspaces/:workspaceId/transformadores/migrar', verificarToken, validar(esquemaMigrarTransformadores), transformadoresController.migrarTransformadores);
+router.get('/transformadores', verificarToken, transformadoresController.obtenerTodosTransformadores);
 router.put('/transformadores/:id', verificarToken, validar(esquemaActualizarTransformador), transformadoresController.actualizarTransformador);
 router.delete('/transformadores/:id', verificarToken, transformadoresController.eliminarTransformador);
 
