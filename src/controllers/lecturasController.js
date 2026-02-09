@@ -248,6 +248,44 @@ async function obtenerUltimaLecturaPorWorkspace(req, res) {
 }
 
 /**
+ * Pagina una consulta a una tabla de lecturas (lecturas o lecturas_historico)
+ * Supabase tiene límite de 1000 registros por consulta.
+ */
+async function paginarConsulta(tabla, registradorId, desde, hasta) {
+  const PAGE_SIZE = 1000;
+  let allData = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from(tabla)
+      .select('*')
+      .eq('registrador_id', registradorId)
+      .gte('timestamp', desde)
+      .lte('timestamp', hasta)
+      .order('timestamp', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      // Si la tabla no existe (ej: lecturas_historico aún no creada), retornar vacío
+      if (error.code === '42P01') return [];
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allData = allData.concat(data);
+      offset += PAGE_SIZE;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allData;
+}
+
+/**
  * Obtiene lecturas históricas de un registrador en un rango de tiempo
  * GET /api/registradores/:registradorId/lecturas/historico
  *
@@ -290,37 +328,16 @@ async function obtenerLecturasHistoricasPorRegistrador(req, res) {
       // Continuar sin el indice_inicial si hay error
     }
 
-    // Obtener TODAS las lecturas paginando (Supabase límite 1000 por consulta)
-    const PAGE_SIZE = 1000;
-    let allData = [];
-    let offset = 0;
-    let hasMore = true;
+    // Consultar ambas tablas en paralelo (lecturas recientes + lecturas_historico)
+    const [datosLecturas, datosHistorico] = await Promise.all([
+      paginarConsulta('lecturas', registradorId, desde, hasta),
+      paginarConsulta('lecturas_historico', registradorId, desde, hasta)
+    ]);
 
-    while (hasMore) {
-      const { data, error } = await supabase
-        .from('lecturas')
-        .select('*')
-        .eq('registrador_id', registradorId)
-        .gte('timestamp', desde)
-        .lte('timestamp', hasta)
-        .order('timestamp', { ascending: true })
-        .range(offset, offset + PAGE_SIZE - 1);
+    const allData = [...datosHistorico, ...datosLecturas]
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-      if (error) {
-        return res.status(500).json({ error: error.message });
-      }
-
-      if (data && data.length > 0) {
-        allData = allData.concat(data);
-        offset += PAGE_SIZE;
-        // Si recibimos menos de PAGE_SIZE, no hay más datos
-        hasMore = data.length === PAGE_SIZE;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    console.log(`[Lecturas] Registrador ${registradorId}: ${allData.length} lecturas entre ${desde} y ${hasta}`);
+    console.log(`[Lecturas] Registrador ${registradorId}: ${allData.length} lecturas (${datosLecturas.length} recientes + ${datosHistorico.length} históricas) entre ${desde} y ${hasta}`);
 
     // Agregar indice_inicial del registrador a cada lectura
     const lecturasConIndice = allData.map(lectura => ({
