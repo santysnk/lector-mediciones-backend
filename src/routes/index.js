@@ -258,6 +258,7 @@ router.delete('/transformadores/:id', verificarToken, transformadoresController.
 router.get('/workspaces/:workspaceId/plantillas-dispositivo', verificarToken, plantillasDispositivoController.obtenerPlantillas);
 router.post('/workspaces/:workspaceId/plantillas-dispositivo', verificarToken, validar(esquemaCrearPlantilla), plantillasDispositivoController.crearPlantilla);
 router.post('/workspaces/:workspaceId/plantillas-dispositivo/migrar', verificarToken, validar(esquemaMigrarPlantillas), plantillasDispositivoController.migrarPlantillas);
+router.get('/plantillas-dispositivo', verificarToken, plantillasDispositivoController.obtenerTodasPlantillas);
 router.get('/plantillas-dispositivo/:id', verificarToken, plantillasDispositivoController.obtenerPlantilla);
 router.put('/plantillas-dispositivo/:id', verificarToken, validar(esquemaActualizarPlantilla), plantillasDispositivoController.actualizarPlantilla);
 router.delete('/plantillas-dispositivo/:id', verificarToken, plantillasDispositivoController.eliminarPlantilla);

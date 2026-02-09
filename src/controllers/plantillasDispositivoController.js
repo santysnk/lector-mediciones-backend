@@ -344,8 +344,55 @@ async function migrarPlantillas(req, res) {
   }
 }
 
+/**
+ * GET /api/plantillas-dispositivo
+ * Obtiene TODAS las plantillas (solo superadmin).
+ * Usado desde Panel SuperAdmin donde el contexto no es un workspace específico.
+ * Query params: tipo=rele|analizador (opcional)
+ */
+async function obtenerTodasPlantillas(req, res) {
+  try {
+    const { tipo } = req.query;
+    const usuarioId = req.user.id;
+
+    // Solo superadmins pueden listar todas las plantillas
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('rol_id, roles (codigo)')
+      .eq('id', usuarioId)
+      .single();
+
+    if (usuario?.roles?.codigo !== 'superadmin') {
+      return res.status(403).json({ error: 'Solo superadmins pueden acceder a todas las plantillas' });
+    }
+
+    let query = supabase
+      .from('plantillas_dispositivo')
+      .select('*')
+      .order('nombre', { ascending: true });
+
+    if (tipo && ['rele', 'analizador'].includes(tipo)) {
+      query = query.eq('tipo_dispositivo', tipo);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error obteniendo todas las plantillas:', error);
+      return res.status(500).json({ error: 'Error obteniendo plantillas' });
+    }
+
+    res.json({ plantillas: data || [] });
+
+  } catch (err) {
+    console.error('Error en obtenerTodasPlantillas:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
 module.exports = {
   obtenerPlantillas,
+  obtenerTodasPlantillas,
   obtenerPlantilla,
   crearPlantilla,
   actualizarPlantilla,
