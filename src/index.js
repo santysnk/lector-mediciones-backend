@@ -50,7 +50,7 @@ app.use(cors({
 console.log('[CORS] Orígenes permitidos:', process.env.CORS_ALLOW_ALL === 'true' ? 'TODOS' : origensPermitidos);
 
 // Parsear JSON
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // Logging básico de requests
 app.use((req, res, next) => {
